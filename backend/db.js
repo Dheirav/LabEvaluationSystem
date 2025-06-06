@@ -99,38 +99,111 @@ async function updateDocument(collection) {
   }
 }
 
+// Replace the existing deleteDocument function with this:
 async function deleteDocument(collection) {
   if (collection === 'users') {
-    // List all users and let the user pick one to delete
     const docs = await mongoose.connection.db.collection('users').find({}).toArray();
     if (docs.length === 0) {
       console.log('No users to delete.');
       return;
     }
-    const choices = docs.map(doc => ({
-      name: `${doc.name} (${doc.user_id}, ${doc.role}) [${doc._id}]`,
-      value: doc._id.toString()
-    }));
-    const { id } = await inquirer.prompt([
-      { type: 'list', name: 'id', message: 'Select user to delete:', choices }
+
+    const { deleteType } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'deleteType',
+        message: 'How would you like to delete?',
+        choices: ['Single User', 'Multiple Users', 'By Role']
+      }
     ]);
-    try {
-      const { ObjectId } = require('mongodb');
-      const result = await mongoose.connection.db.collection('users').deleteOne({ _id: new ObjectId(id) });
-      console.log('Deleted:', result.deletedCount);
-    } catch (e) {
-      console.error('Delete error:', e.message);
+
+    if (deleteType === 'Single User') {
+      const choices = docs.map(doc => ({
+        name: `${doc.name} (${doc.user_id}, ${doc.role}) [${doc._id}]`,
+        value: doc._id.toString()
+      }));
+      const { id } = await inquirer.prompt([
+        { type: 'list', name: 'id', message: 'Select user to delete:', choices }
+      ]);
+      try {
+        const { ObjectId } = require('mongodb');
+        const result = await mongoose.connection.db.collection('users').deleteOne({ _id: new ObjectId(id) });
+        console.log('Deleted:', result.deletedCount);
+      } catch (e) {
+        console.error('Delete error:', e.message);
+      }
+    } 
+    else if (deleteType === 'Multiple Users') {
+      const choices = docs.map(doc => ({
+        name: `${doc.name} (${doc.user_id}, ${doc.role}) [${doc._id}]`,
+        value: doc._id.toString()
+      }));
+      const { ids } = await inquirer.prompt([
+        {
+          type: 'checkbox',
+          name: 'ids',
+          message: 'Select users to delete (use space to select multiple):',
+          choices
+        }
+      ]);
+      if (ids.length === 0) {
+        console.log('No users selected.');
+        return;
+      }
+      const { confirm } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'confirm',
+          message: `Are you sure you want to delete ${ids.length} users?`,
+          default: false
+        }
+      ]);
+      if (!confirm) {
+        console.log('Delete operation cancelled.');
+        return;
+      }
+      try {
+        const { ObjectId } = require('mongodb');
+        const result = await mongoose.connection.db.collection('users')
+          .deleteMany({ _id: { $in: ids.map(id => new ObjectId(id)) } });
+        console.log('Deleted:', result.deletedCount);
+      } catch (e) {
+        console.error('Delete error:', e.message);
+      }
     }
-  } else {
-    const { id } = await inquirer.prompt([
-      { type: 'input', name: 'id', message: 'Enter _id of document to delete:' }
-    ]);
-    try {
-      const { ObjectId } = require('mongodb');
-      const result = await mongoose.connection.db.collection(collection).deleteOne({ _id: new ObjectId(id) });
-      console.log('Deleted:', result.deletedCount);
-    } catch (e) {
-      console.error('Delete error:', e.message);
+    else if (deleteType === 'By Role') {
+      const { role } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'role',
+          message: 'Select role to delete:',
+          choices: ['student', 'faculty']
+        }
+      ]);
+      const usersToDelete = docs.filter(doc => doc.role === role);
+      if (usersToDelete.length === 0) {
+        console.log(`No users found with role: ${role}`);
+        return;
+      }
+      const { confirm } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'confirm',
+          message: `Are you sure you want to delete all ${usersToDelete.length} ${role}s?`,
+          default: false
+        }
+      ]);
+      if (!confirm) {
+        console.log('Delete operation cancelled.');
+        return;
+      }
+      try {
+        const result = await mongoose.connection.db.collection('users')
+          .deleteMany({ role });
+        console.log('Deleted:', result.deletedCount);
+      } catch (e) {
+        console.error('Delete error:', e.message);
+      }
     }
   }
 }

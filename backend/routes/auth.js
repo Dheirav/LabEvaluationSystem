@@ -1,11 +1,13 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const xlsx = require('xlsx');
+const pdfParse = require('pdf-parse')
 const User = require('../models/User');
 const { protect,authorize } = require('../middleware/auth');
+const multerUpload = require('../middleware/upload');
 
 const router = express.Router();
 
-//
 const generateToken = (user) => {
     return jwt.sign(
         { id: user._id, role: user.role },
@@ -14,7 +16,7 @@ const generateToken = (user) => {
     );
 }
 
-router.post('/register',protect, authorize('admin'), async (req, res) => {
+router.post('/register/individual',protect, authorize('admin'), async (req, res) => {
     const { name, user_id, password, role } = req.body;
     
     if(!['faculty', 'student'].includes(role)) {
@@ -33,13 +35,6 @@ router.post('/register',protect, authorize('admin'), async (req, res) => {
     });
     try {
         await user.save();
-        res.status(201).json({
-            _id: user._id,
-            name: user.name,
-            user_id: user.user_id,
-            role: user.role,
-            token: generateToken(user)
-        });
     } catch (error) {
         res.status(500).json({ message: 'Error registering user' });
     }
@@ -53,6 +48,114 @@ router.post('/register',protect, authorize('admin'), async (req, res) => {
         }
     });
 });  
+
+router.post('/register/bulk', protect, authorize('admin'), multerUpload.single('file'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    const ext = req.file.originalname.split('.').pop().toLowerCase();
+    let parsedUsers = [];
+
+    try {
+        if (!['xlsx', 'xls', 'csv', 'json', 'pdf'].includes(ext)) {
+            return res.status(400).json({ message: 'Unsupported file format' });
+        }
+
+        if (['xlsx', 'xls', 'csv'].includes(ext)) {
+            const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            parsedUsers = xlsx.utils.sheet_to_json(sheet);
+        }
+        
+        else if (ext === 'json') {
+            const jsonData = JSON.parse(req.file.buffer.toString());
+            parsedUsers = Array.isArray(jsonData) ? jsonData : jsonData.users || [];
+            
+            if (!Array.isArray(parsedUsers)) {
+                return res.status(400).json({ 
+                    message: 'Invalid JSON format. Expected an array of users or an object with a users array' 
+                });
+            }
+        }
+        else if (ext === 'pdf') {
+            const dataBuffer = req.file.buffer;
+            const pdfData = await pdfParse(dataBuffer);
+            const text = pdfData.text;
+        
+            const lines = text
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line && !line.toLowerCase().includes('name'))  // Skip headers
+        
+            const parsed = [];
+        
+            for (const line of lines) {
+                let cleaned = line.replace(/\s{2,}/g, ','); // Convert large spaces to commas
+        
+                // Fallback: if not enough fields, try manually fixing delimiters
+                if ((cleaned.match(/,/g) || []).length < 3) {
+                    cleaned = line.replace(/\s+/g, ',');
+                }
+        
+                const [name, user_id, password, role] = cleaned.split(',').map(x => x?.trim());
+        
+                if (!name || !user_id || !password || !role) {
+                    console.warn(`Skipping malformed line: "${line}"`);
+                    continue;
+                }
+        
+                if (!['student', 'faculty'].includes(role.toLowerCase())) {
+                    console.warn(`Invalid role: "${role}"`);
+                    continue;
+                }
+        
+                parsed.push({
+                    name,
+                    user_id,
+                    password,
+                    role: role.toLowerCase()
+                });
+            }
+        
+            parsedUsers = parsed;
+        }
+        
+        if (!parsedUsers || parsedUsers.length === 0) {
+            return res.status(400).json({ message: 'No valid users found in file' });
+        }
+
+        const createdUsers = [];
+        const errors = [];
+
+        for (const entry of parsedUsers) {
+            const { name, user_id, password, role } = entry;
+
+            if (!name || !user_id || !password || !['student', 'faculty'].includes(role)) {
+                errors.push({ user_id, message: 'Invalid or missing fields' });
+                continue;
+            }
+
+            const existing = await User.findOne({ user_id });
+            if (existing) {
+                errors.push({ user_id, message: 'User already exists' });
+                continue;
+            }
+
+            const newUser = new User({ name, user_id, password, role });
+            await newUser.save();
+            createdUsers.push({ name: newUser.name, user_id: newUser.user_id, role: newUser.role });
+        }
+
+        return res.status(207).json({
+            message: 'File processed',
+            created: createdUsers,
+            errors
+        });
+
+    } catch (error) {
+        console.error('Error processing file:', error);
+        return res.status(500).json({ message: 'Failed to process file' });
+    }
+});
 
 router.post('/login', async (req, res) => {
     const { user_id, password } = req.body;

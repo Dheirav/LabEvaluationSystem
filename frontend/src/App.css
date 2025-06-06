@@ -3,11 +3,18 @@
   font-family: 'Poppins', sans-serif;
 }
 
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
 
 /* Login.css */
 .login-page {
     min-height: 97.5vh;
-    background: linear-gradient(135deg, #0c5656, #4cc0c0);
+    background: linear-gradient(135deg, #282f2f, #becdcd);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -108,7 +115,7 @@
     bottom: 11px;
     cursor: pointer;
     font-size: 0.9rem;
-    color: #b0fefe;
+    color: #d3e5e5;
     background: none;
     border: none;
     padding: 0 4px;

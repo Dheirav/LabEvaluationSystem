@@ -1,11 +1,11 @@
-
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Login from './components/Login';
+import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import UserRegistration from './pages/UserRegistration';
 
 function App() {
   return (
@@ -30,6 +30,12 @@ function App() {
           <Route path="/student" element={
             <ProtectedRoute allowedRoles={['student']}>
               <StudentDashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/registrations" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <UserRegistration />
             </ProtectedRoute>
           } />
 

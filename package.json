@@ -9,7 +9,8 @@
     "server": "npm run dev --prefix backend",
     "build": "npm run build --prefix frontend",
     "preview": "npm run preview --prefix frontend",
-    "lint": "npm run lint --prefix frontend"
+    "lint": "npm run lint --prefix frontend",
+    "db": "node backend/db.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
