@@ -1,0 +1,136 @@
+/* Import a Google Font (optional, e.g., Poppins) */
+
+* {
+  font-family: 'Poppins', sans-serif;
+}
+/* Login.css */
+.login-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0c5656, #4cc0c0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  
+  .login-box {
+    backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    padding: 40px 32px;
+    width: 100%;
+    max-width: 400px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    transition: transform 0.3s ease;
+  }
+  
+  .login-box:hover {
+    transform: scale(1.01);
+  }
+  
+  .login-heading {
+    text-align: center;
+    margin-bottom: 24px;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #ffffff;
+  }
+  
+  .login-error {
+    background: rgba(255, 0, 0, 0.1);
+    color: #ffffff;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+    text-align: center;
+    font-weight: bold;
+  }
+  
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .login-label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: bold;
+    color: #ffffff;
+  }
+  
+  .login-input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-size: 1rem;
+    outline: none;
+  }
+  
+  .login-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .login-button {
+    width: 100%;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  
+  .login-button:hover {
+    background: rgba(0, 0, 0, 0.5);
+  }
+  
+  .login-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .login-show-password {
+    position: absolute;
+    right: -13px;
+    bottom: 11px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #ffffff;
+    background: none;
+    border: none;
+    padding: 0 4px;
+    z-index: 2;
+    font-weight: bold;
+  }
+  
+  /* Mobile tweaks */
+  @media (max-width: 480px) {
+    .login-box {
+      padding: 28px 24px;
+    }
+  
+    .login-heading {
+      font-size: 1.5rem;
+    }
+  
+    .login-input {
+      padding: 8px 10px;
+    }
+  
+    .login-button {
+      padding: 10px;
+    }
+  }
+  

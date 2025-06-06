@@ -1,7 +1,17 @@
 {
+  "name": "LabEvaluationSystem",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\"",
+    "frontend": "npm run dev --prefix frontend",
+    "server": "npm run dev --prefix backend",
+    "build": "npm run build --prefix frontend",
+    "preview": "npm run preview --prefix frontend",
+    "lint": "npm run lint --prefix frontend"
+  },
   "devDependencies": {
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.4",
-    "tailwindcss": "^4.1.8"
+    "concurrently": "^8.2.2"
   }
 }
