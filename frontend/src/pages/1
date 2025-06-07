@@ -1,0 +1,42 @@
+// In the TableHead section
+<TableHead>
+  <TableRow>
+    <TableCell>
+      <TableSortLabel
+        active={orderBy === 'user_id'}
+        direction={orderBy === 'user_id' ? order : 'asc'}
+        onClick={() => handleRequestSort('user_id')}
+      >
+        User ID
+      </TableSortLabel>
+    </TableCell>
+    <TableCell>
+      <TableSortLabel
+        active={orderBy === 'name'}
+        direction={orderBy === 'name' ? order : 'asc'}
+        onClick={() => handleRequestSort('name')}
+      >
+        Name
+      </TableSortLabel>
+    </TableCell>
+    <TableCell>
+      <TableSortLabel
+        active={orderBy === 'roleNumber'}
+        direction={orderBy === 'roleNumber' ? order : 'asc'}
+        onClick={() => handleRequestSort('roleNumber')}
+      >
+        Role Number
+      </TableSortLabel>
+    </TableCell>
+    <TableCell>
+      <TableSortLabel
+        active={orderBy === 'role'}
+        direction={orderBy === 'role' ? order : 'asc'}
+        onClick={() => handleRequestSort('role')}
+      >
+        Role
+      </TableSortLabel>
+    </TableCell>
+    <TableCell>Actions</TableCell>
+  </TableRow>
+</TableHead>

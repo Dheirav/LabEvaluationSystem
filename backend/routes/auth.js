@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const xlsx = require('xlsx');
 const pdfParse = require('pdf-parse')
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { protect,authorize } = require('../middleware/auth');
 const multerUpload = require('../middleware/upload');
@@ -16,38 +17,56 @@ const generateToken = (user) => {
     );
 }
 
-router.post('/register/individual',protect, authorize('admin'), async (req, res) => {
-    const { name, user_id, password, role } = req.body;
-    
-    if(!['faculty', 'student'].includes(role)) {
-        return res.status(400).json({ message: 'Invalid role' });
-    }
-
-    const existingUser = await User.findOne({ user_id });
-    if (existingUser) {
-        return res.status(400).json({ message: 'User already exists' });
-    }
-    const user = new User({
-        name,
-        user_id,
-        password,
-        role
-    });
+router.post('/register/individual', protect, authorize('admin'), async (req, res) => {
     try {
-        await user.save();
-    } catch (error) {
-        res.status(500).json({ message: 'Error registering user' });
-    }
-    res.status(201).json({
-        message: 'User registered successfully',
-        user: {
-            _id: user._id,
-            name: user.name,
-            user_id: user.user_id,
-            role: user.role
+        const { name, user_id, password, role, roll_number } = req.body;
+        
+        if(!['faculty', 'student'].includes(role)) {
+            return res.status(400).json({ message: 'Invalid role' });
         }
-    });
-});  
+
+        const existingUser = await User.findOne({ 
+            $or: [
+                { user_id },
+                { roll_number }
+            ]
+        });
+        
+        if (existingUser) {
+            return res.status(400).json({ 
+                message: existingUser.user_id === user_id 
+                    ? 'User already exists' 
+                    : 'Roll number already exists'
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const user = new User({
+            name,
+            user_id,
+            roll_number,
+            password: hashedPassword,
+            role
+        });
+
+        await user.save();
+
+        return res.status(201).json({
+            message: 'User registered successfully',
+            user: {
+                _id: user._id,
+                name: user.name,
+                roll_number: user.roll_number,
+                user_id: user.user_id,
+                role: user.role
+            }
+        });
+
+    } catch (error) {
+        console.error('Registration error:', error);
+        return res.status(500).json({ message: 'Error registering user' });
+    }
+});
 
 router.post('/register/bulk', protect, authorize('admin'), multerUpload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
@@ -92,13 +111,14 @@ router.post('/register/bulk', protect, authorize('admin'), multerUpload.single('
                 let cleaned = line.replace(/\s{2,}/g, ','); // Convert large spaces to commas
         
                 // Fallback: if not enough fields, try manually fixing delimiters
-                if ((cleaned.match(/,/g) || []).length < 3) {
+                if ((cleaned.match(/,/g) || []).length < 4) {
                     cleaned = line.replace(/\s+/g, ',');
                 }
         
-                const [name, user_id, password, role] = cleaned.split(',').map(x => x?.trim());
+                // Now expecting: name, user_id, roll_number, password, role
+                const [name, user_id, roll_number, password, role] = cleaned.split(',').map(x => x?.trim());
         
-                if (!name || !user_id || !password || !role) {
+                if (!name || !user_id || !roll_number || !password || !role) {
                     console.warn(`Skipping malformed line: "${line}"`);
                     continue;
                 }
@@ -111,6 +131,7 @@ router.post('/register/bulk', protect, authorize('admin'), multerUpload.single('
                 parsed.push({
                     name,
                     user_id,
+                    roll_number,
                     password,
                     role: role.toLowerCase()
                 });
@@ -126,23 +147,29 @@ router.post('/register/bulk', protect, authorize('admin'), multerUpload.single('
         const createdUsers = [];
         const errors = [];
 
-        for (const entry of parsedUsers) {
-            const { name, user_id, password, role } = entry;
 
-            if (!name || !user_id || !password || !['student', 'faculty'].includes(role)) {
+        for (const entry of parsedUsers) {
+            const { name, user_id, roll_number, password, role } = entry;
+
+            if (!name || !user_id || !roll_number || !password || !['student', 'faculty'].includes(role)) {
                 errors.push({ user_id, message: 'Invalid or missing fields' });
                 continue;
             }
 
-            const existing = await User.findOne({ user_id });
+            const existing = await User.findOne({ 
+                $or: [
+                    { user_id },
+                    { roll_number }
+                ]
+            });
             if (existing) {
-                errors.push({ user_id, message: 'User already exists' });
+                errors.push({ user_id, message: existing.user_id === user_id ? 'User already exists' : 'Roll number already exists' });
                 continue;
             }
 
-            const newUser = new User({ name, user_id, password, role });
+            const newUser = new User({ name, user_id, roll_number, password, role });
             await newUser.save();
-            createdUsers.push({ name: newUser.name, user_id: newUser.user_id, role: newUser.role });
+            createdUsers.push({ name: newUser.name, user_id: newUser.user_id, roll_number: newUser.roll_number, role: newUser.role });
         }
 
         return res.status(207).json({
@@ -174,9 +201,53 @@ router.post('/login', async (req, res) => {
         _id: user._id,
         name: user.name,
         user_id: user.user_id,
+        roll_number: user.roll_number,
         role: user.role,
         token
     });
+});
+
+
+// Get all users
+router.get('/get_users', protect, authorize('admin'), async (req, res) => {
+  try {
+    const users = await User.find().select('-password');
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching users' });
+  }
+});
+// Update user
+router.put('/update/users/:id', protect, authorize('admin'), async (req, res) => {
+    try {
+        const updateFields = { ...req.body };
+        // Only allow updating allowed fields
+        const allowedFields = ['name', 'user_id', 'roll_number', 'role'];
+        Object.keys(updateFields).forEach(key => {
+            if (!allowedFields.includes(key)) {
+                delete updateFields[key];
+            }
+        });
+
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            { $set: updateFields },
+            { new: true }
+        ).select('-password');
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating user' });
+    }
+});
+
+// Delete user
+router.delete('/delete/users/:id', protect, authorize('admin'), async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting user' });
+  }
 });
 
 module.exports = router;

@@ -41,7 +41,7 @@ const AdminSidebar = () => {
     { text: 'Students', path: '/admin/students', icon: <PeopleIcon /> },
     { text: 'Faculty', path: '/admin/faculty', icon: <SchoolIcon /> },
     { text: 'Reports', path: '/admin/reports', icon: <BarChartIcon /> },
-    { text: 'Registrations', path: '/admin/registrations', icon: <PersonAddIcon /> },
+    { text: 'User Management', path: '/admin/registrations', icon: <PersonAddIcon /> },
   ];
 
   const handleLogout = () => {

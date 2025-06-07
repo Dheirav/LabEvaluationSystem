@@ -16,6 +16,7 @@ const MONGO_URI = process.env.MONGO_URI;
 const userFields = [
   { type: 'input', name: 'name', message: 'Name:' },
   { type: 'input', name: 'user_id', message: 'User ID:' },
+  { type: 'input', name: 'roll_number', message: 'Roll Number:' },
   { type: 'password', name: 'password', message: 'Password:' },
   { type: 'list', name: 'role', message: 'Role:', choices: ['admin', 'faculty', 'student'], default: 'student' },
 ];

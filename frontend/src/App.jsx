@@ -5,7 +5,7 @@ import FacultyDashboard from './pages/FacultyDashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
-import UserRegistration from './pages/UserRegistration';
+import UserRegistration from './pages/UserManagement';
 
 function App() {
   return (
