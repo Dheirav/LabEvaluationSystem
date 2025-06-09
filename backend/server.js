@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth');
+const logsRoutes = require('./routes/logs');
 
 // Load environment variables
 dotenv.config();
@@ -20,6 +21,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/logs', logsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

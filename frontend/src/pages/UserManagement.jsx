@@ -224,7 +224,7 @@ const handleDeleteConfirm = async () => {
                 background: 'rgba(255,255,255,0.10)',
                 borderRadius: 3,
                 p: 3,
-                height: '100%',
+                height: '115%',
                 minHeight: 0,
                 display: 'flex',
                 flexDirection: 'column',
@@ -409,6 +409,7 @@ const handleDeleteConfirm = async () => {
                   page={page}
                   onPageChange={handleChangePage}
                   onRowsPerPageChange={handleChangeRowsPerPage}
+
                   sx={{
                     color: 'black',
                     '.MuiTablePagination-select': {
@@ -483,10 +484,7 @@ const handleDeleteConfirm = async () => {
                     border: '1px solid rgba(255,255,255,0.2)',
                     color: '#222',
                     flexShrink: 0,
-                    transition: 'transform 0.3s ease',
-                    '&:hover': {
-                      transform: 'scale(1.01)'
-                    },
+
                   }}
                 >
                   <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -623,10 +621,7 @@ const handleDeleteConfirm = async () => {
                   display: 'flex',
                   flexDirection: 'column',
                   flexShrink: 0,
-                  '&:hover': {
-                    transform: 'scale(1.01)'
-                  },
-                }}
+                 }}
               >
                 <Typography variant="h6" gutterBottom sx={{ display: 'flex', gap: 1 }}>
                   <CloudUploadIcon />

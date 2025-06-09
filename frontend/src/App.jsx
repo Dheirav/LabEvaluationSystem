@@ -3,9 +3,10 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
 import StudentDashboard from './pages/StudentDashboard';
+import AdminServerLogs from './pages/AdminServerLogs';
+import UserManagement from './pages/UserManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
-import UserRegistration from './pages/UserManagement';
 
 function App() {
   return (
@@ -33,9 +34,15 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/admin/registrations" element={
+          <Route path="/admin/user-management" element={
             <ProtectedRoute allowedRoles={['admin']}>
-              <UserRegistration />
+              <UserManagement />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/server-logs" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminServerLogs />
             </ProtectedRoute>
           } />
 

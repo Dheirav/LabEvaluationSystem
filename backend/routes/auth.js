@@ -4,6 +4,7 @@ const xlsx = require('xlsx');
 const pdfParse = require('pdf-parse')
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const logAction = require('../utils/logAction');
 const { protect,authorize } = require('../middleware/auth');
 const multerUpload = require('../middleware/upload');
 
@@ -50,6 +51,13 @@ router.post('/register/individual', protect, authorize('admin'), async (req, res
         });
 
         await user.save();
+
+        // Log the action
+        await logAction({
+          user: req.user?.user_id || 'system',
+          action: 'create_user',
+          details: `Created user ${user_id} (${role})`
+        });
 
         return res.status(201).json({
             message: 'User registered successfully',
@@ -169,6 +177,13 @@ router.post('/register/bulk', protect, authorize('admin'), multerUpload.single('
 
             const newUser = new User({ name, user_id, roll_number, password, role });
             await newUser.save();
+
+            // Log the action
+            await logAction({
+                user: req.user?.user_id || 'system',
+                action: 'create_user',
+                details: `Bulk created user ${user_id} (${role})`
+            });
             createdUsers.push({ name: newUser.name, user_id: newUser.user_id, roll_number: newUser.roll_number, role: newUser.role });
         }
 
@@ -195,6 +210,13 @@ router.post('/login', async (req, res) => {
     if (!isMatch) {
         return res.status(401).json({ message: 'Invalid password' });
     }
+
+    // Log the login action
+    await logAction({
+        user: user.user_id,
+        action: 'login',
+        details: `User ${user.user_id} logged in`
+    });
 
     const token = generateToken(user);
     res.status(200).json({
@@ -235,6 +257,12 @@ router.put('/update/users/:id', protect, authorize('admin'), async (req, res) =>
             { new: true }
         ).select('-password');
         res.json(user);
+        // Log the action
+        await logAction({
+            user: req.user?.user_id || 'system',
+            action: 'update_user',
+            details: `Updated user ${user.user_id} (${user.role})`
+        });
     } catch (error) {
         res.status(500).json({ message: 'Error updating user' });
     }
@@ -244,6 +272,12 @@ router.put('/update/users/:id', protect, authorize('admin'), async (req, res) =>
 router.delete('/delete/users/:id', protect, authorize('admin'), async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
+    // Log the action
+    await logAction({
+      user: req.user?.user_id || 'system',
+      action: 'delete_user',
+      details: `Deleted user with ID ${req.params.id}`
+    });
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting user' });

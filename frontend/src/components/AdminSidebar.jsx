@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Drawer, 
   List, 
@@ -40,15 +40,14 @@ const AdminSidebar = () => {
     { text: 'Evaluations', path: '/admin/evaluations', icon: <AssignmentIcon /> },
     { text: 'Students', path: '/admin/students', icon: <PeopleIcon /> },
     { text: 'Faculty', path: '/admin/faculty', icon: <SchoolIcon /> },
-    { text: 'Reports', path: '/admin/reports', icon: <BarChartIcon /> },
-    { text: 'User Management', path: '/admin/registrations', icon: <PersonAddIcon /> },
+    { text: 'Server Logs', path: '/admin/server-logs', icon: <BarChartIcon /> },
+    { text: 'User Management', path: '/admin/user-management', icon: <PersonAddIcon /> },
   ];
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
   };
-
 
   return (
     <Drawer
@@ -67,17 +66,21 @@ const AdminSidebar = () => {
           color: 'white',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          zIndex: 1000, // Ensure sidebar stays above content
         }
       }}
     >
       <div>
-        <Toolbar sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: open ? 'flex-end' : 'center',
-          px: [1]
-        }}>
+        <Toolbar 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: open ? 'flex-end' : 'center',
+            px: [1],
+            minHeight: '64px', // Match AppBar height
+          }}
+        >
           <IconButton onClick={handleDrawerToggle} sx={{ color: 'white' }}>
             {open ? <ChevronLeftIcon /> : <MenuIcon />}
           </IconButton>
@@ -130,7 +133,7 @@ const AdminSidebar = () => {
         <Divider sx={{ bgcolor: '#374151' }} />
         <List>
           <ListItem 
-            button 
+            button
             onClick={handleLogout} 
             sx={{
               minHeight: 48,
@@ -160,4 +163,5 @@ const AdminSidebar = () => {
     </Drawer>
   );
 };
+
 export default AdminSidebar;
