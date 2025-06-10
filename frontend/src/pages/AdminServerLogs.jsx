@@ -13,8 +13,12 @@ import {
   Grid,
   Toolbar,
   TablePagination,
-  TableContainer
+  TableContainer,
+  Button,
+  Stack
 } from '@mui/material';
+import ClearIcon from '@mui/icons-material/Clear'; 
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'; 
 import AdminSidebar from '../components/AdminSidebar';
 import { debounce } from 'lodash';
 
@@ -29,6 +33,76 @@ const AdminServerLogs = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
+
+    const handleClearFilters = () => {
+    setSearch('');
+    setFrom('');
+    setTo('');
+    setUser('');
+    setAction('');
+    
+  };
+
+  const handleClearLogs = async () => {
+    // Build confirmation message based on active filters
+    let confirmMessage = 'Are you sure you want to delete';
+    
+    if (search || user || action || from || to) {
+      confirmMessage += ' the filtered logs';
+      if (user) confirmMessage += ` for user "${user}"`;
+      if (action) confirmMessage += ` with action "${action}"`;
+      if (search) confirmMessage += ` containing "${search}"`;
+      if (from || to) {
+        confirmMessage += ' from the date range';
+        if (from) confirmMessage += ` starting ${new Date(from).toLocaleDateString()}`;
+        if (to) confirmMessage += ` until ${new Date(to).toLocaleDateString()}`;
+      }
+    } else {
+      confirmMessage += ' ALL logs';
+    }
+    
+    confirmMessage += '? This action cannot be undone.';
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const params = [];
+      if (search) params.push(`details=${encodeURIComponent(search)}`);
+      if (user) params.push(`user=${encodeURIComponent(user)}`);
+      if (action) params.push(`action=${encodeURIComponent(action)}`);
+      if (from) params.push(`from=${from}`);
+      if (to) params.push(`to=${to}`);
+      const query = params.length ? `?${params.join('&')}` : '';
+      
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/logs/delete_logs${query}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        // If successful, refresh the logs
+        fetchLogs();
+        // You might want to show a success message here
+        alert(`Successfully deleted ${data.deletedCount} logs.`);
+      } else {
+        // Handle error
+        console.error('Failed to delete logs:', data.message);
+        alert('Failed to delete logs: ' + (data.message || 'Unknown error'));
+      }
+    } catch (e) {
+      console.error("Error deleting logs:", e);
+      alert('Error deleting logs: ' + e.message);
+    }
+    setLoading(false);
+  };
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -75,7 +149,6 @@ const AdminServerLogs = () => {
   useEffect(() => {
     debouncedFetch();
     return () => debouncedFetch.cancel();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, user, action, from, to, page, rowsPerPage]);
 
   const handleChangePage = (_, newPage) => {
@@ -90,7 +163,7 @@ const AdminServerLogs = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #282f2f, #becdcd)' }}>
       <AdminSidebar />
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3 ,overflow: 'auto'}}>
         <Toolbar />
         <Typography variant="h4" gutterBottom color="white" sx={{ mb: 2 }}>
           Server Logs
@@ -102,10 +175,15 @@ const AdminServerLogs = () => {
             borderRadius: 3,
             mx: 'auto',
             mt: 2,
-            bgcolor: 'rgba(255, 255, 255, 0.9)',
-            height: 'calc(100vh - 180px)',
+            maxHeight: '70vh',
+            overflow: 'auto',
             display: 'flex',
             flexDirection: 'column',
+            backdropFilter: 'blur(20px)',
+            background: 'rgba(255,255,255,0.2)',            
+            boxShadow: '0 4px 30px rgba(0,0,0,0.1)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            color: '#222',
           }}
         >
           <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -159,17 +237,48 @@ const AdminServerLogs = () => {
               />
             </Grid>
           </Grid>
+        
+          <Stack 
+            direction="row" 
+            spacing={2} 
+            sx={{ mb: 3, justifyContent: 'space-between', alignItems: 'center' }}
+          >
+            <Typography variant="subtitle1" sx={{ fontStyle: 'italic', backgroundColor: 'rgba(245, 245, 245, 0.5)', padding: '8px', borderRadius: '4px' }}>   
+              {total} {total === 1 ? 'log' : 'logs'} found
+            </Typography>
+            
+            <Stack direction="row" spacing={2}>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<ClearIcon />}
+                onClick={handleClearFilters}
+                size="small"
+              >
+                Clear Filters
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteSweepIcon />}
+                onClick={handleClearLogs}
+                size="small"
+                disabled={total === 0}
+              >
+                Delete {total > 0 ? `${total} ` : ''}Selected Logs
+              </Button>
+            </Stack>
+          </Stack>
+
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
               <CircularProgress />
             </Box>
           ) : (
             <>
-              <Box sx={{ flex: 1, overflow: 'auto' }}>
                 <TableContainer
                   component={Paper}
                   sx={{
-                    maxHeight: 'calc(100vh - 330px)',
                     boxShadow: 'none',
                     bgcolor: 'transparent'
                   }}
@@ -180,7 +289,7 @@ const AdminServerLogs = () => {
                         <TableCell
                           sx={{
                             fontWeight: 'bold',
-                            backgroundColor: '#f5f5f5',
+                            backgroundColor: 'rgba(245,245,245,0.5)',
                             position: 'sticky',
                             top: 0,
                             zIndex: 1
@@ -191,7 +300,7 @@ const AdminServerLogs = () => {
                         <TableCell
                           sx={{
                             fontWeight: 'bold',
-                            backgroundColor: '#f5f5f5',
+                            backgroundColor: 'rgba(245,245,245,0.5)',
                             position: 'sticky',
                             top: 0,
                             zIndex: 1
@@ -202,7 +311,7 @@ const AdminServerLogs = () => {
                         <TableCell
                           sx={{
                             fontWeight: 'bold',
-                            backgroundColor: '#f5f5f5',
+                            backgroundColor: 'rgba(245,245,245,0.5)',
                             position: 'sticky',
                             top: 0,
                             zIndex: 1
@@ -213,7 +322,7 @@ const AdminServerLogs = () => {
                         <TableCell
                           sx={{
                             fontWeight: 'bold',
-                            backgroundColor: '#f5f5f5',
+                            backgroundColor: 'rgba(245,245,245,0.5)',
                             position: 'sticky',
                             top: 0,
                             zIndex: 1
@@ -249,7 +358,7 @@ const AdminServerLogs = () => {
                     </TableBody>
                   </Table>
                 </TableContainer>
-              </Box>
+              
               <TablePagination
                 rowsPerPageOptions={[5, 10, 25, 50]}
                 component="div"

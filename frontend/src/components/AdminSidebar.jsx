@@ -78,7 +78,7 @@ const AdminSidebar = () => {
             alignItems: 'center', 
             justifyContent: open ? 'flex-end' : 'center',
             px: [1],
-            minHeight: '64px', // Match AppBar height
+            minHeight: '64px', 
           }}
         >
           <IconButton onClick={handleDrawerToggle} sx={{ color: 'white' }}>
