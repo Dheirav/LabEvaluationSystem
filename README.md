@@ -1,65 +1,182 @@
 # Lab Evaluation System
 
-This project is a full-stack Lab Evaluation System for DCSE, supporting user authentication, server log tracking, and admin management features.
+A full-stack web application for managing laboratory evaluations and user registrations in an educational setting.
 
 ## Features
 
-- User authentication (admin, faculty, student)
-- Prevents multiple simultaneous sessions per user
-- Tracks login attempts, including IP and system/device info
-- Server logs with filtering, searching, and download (CSV, JSON, Excel, PDF)
-- Admin can delete logs with confirmation
-- Real-time log updates in the admin panel (auto-refresh every 5 seconds)
-- Responsive, modern UI with Material-UI
+### User Management
+- **Individual User Registration**
+  - Register single users with roles (student/faculty)
+  - Real-time form validation
+  - Secure password handling
+  - Role-based access control
 
-## Getting Started
+- **Bulk User Registration**
+  - Upload users in bulk via file upload
+  - Supported formats: XLSX, XLS, CSV, JSON, PDF
+  - Batch processing with error handling
+  - Progress tracking and status reporting
 
-### Prerequisites
+### Authentication
+- Secure login system
+- JWT-based authentication
+- Role-based authorization
+- Session management
 
-- Node.js (v18+ recommended)
-- MongoDB
+## Technology Stack
 
-### Installation
+### Frontend
+- React.js
+- Material-UI (MUI) components
+- Axios for API calls
+- React Router for navigation
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-org/lab-evaluation-system.git
-   cd lab-evaluation-system
-   ```
+### Backend
+- Node.js
+- Express.js
+- MongoDB with Mongoose
+- Multer for file uploads
+- JWT for authentication
 
-2. **Backend setup:**
-   ```bash
-   cd backend
-   npm install
-   # Create a .env file with your MongoDB URI and JWT secret
-   cp .env.example .env
-   npm start
-   ```
+## Project Structure
 
-3. **Frontend setup:**
-   ```bash
-   cd ../frontend
-   npm install
-   npm start
-   ```
+```
+Lab_Evaluation_System/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Header.jsx
+│   │   │   └── AdminSidebar.jsx
+│   │   ├── pages/
+│   │   │   └── UserRegistration.jsx
+│   │   └── App.css
+│   └── package.json
+│
+├── backend/
+│   ├── routes/
+│   │   └── auth.js
+│   ├── models/
+│   │   └── User.js
+│   └── package.json
+│
+└── README.md
+```
 
-4. **Access the app:**
-   - Frontend: [http://localhost:5173](http://localhost:5173)
-   - Backend API: [http://localhost:5000](http://localhost:5000)
+## Setup Instructions
 
-## Usage
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/Lab_Evaluation_System.git
+cd Lab_Evaluation_System
+```
 
-- **Admin Panel:** View, filter, download, and delete server logs. Logs auto-refresh every 5 seconds for real-time updates.
-- **Login Security:** Only one active session per user is allowed. If a user logs in elsewhere, the previous session is invalidated.
-- **Log Tracking:** All login attempts (success or failure) are logged with user ID, IP, and system info.
+2. Install backend dependencies:
+```bash
+cd backend
+npm install
+```
 
-## Customization
+3. Install frontend dependencies:
+```bash
+cd frontend
+npm install
+```
 
-- **Polling Interval:** To change the log auto-refresh rate, edit the interval in `frontend/src/pages/AdminServerLogs.jsx` (default: 5000ms).
-- **Session Policy:** To allow multiple sessions per user, adjust the session token logic in `backend/routes/auth.js`.
+4. Start the backend server:
+```bash
+cd backend
+npm start
+```
+
+5. Start the frontend development server:
+```bash
+cd frontend
+npm start
+```
+
+## API Documentation
+
+### Authentication Routes
+
+#### Individual Registration
+```http
+POST /api/auth/register/individual
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "user_id": "STU001",
+  "password": "secure123",
+  "role": "student"
+}
+```
+
+#### Bulk Registration
+```http
+POST /api/auth/register/bulk
+Content-Type: multipart/form-data
+
+file: [upload file]
+```
+
+#### Login
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "user_id": "STU001",
+  "password": "secure123"
+}
+```
+
+## Bulk Upload File Formats
+
+### JSON Format
+```json
+{
+  "users": [
+    {
+      "name": "John Doe",
+      "user_id": "STU001",
+      "password": "pass123",
+      "role": "student"
+    },
+    {
+      "name": "Jane Smith",
+      "user_id": "FAC001",
+      "password": "pass456",
+      "role": "faculty"
+    }
+  ]
+}
+```
+
+### CSV Format
+```csv
+name,user_id,password,role
+John Doe,STU001,pass123,student
+Jane Smith,FAC001,pass456,faculty
+```
+
+## Environment Variables
+
+Create `.env` files in both frontend and backend directories:
+
+```env
+# Backend .env
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/lab_eval
+JWT_SECRET=your_jwt_secret
+
+# Frontend .env
+REACT_APP_API_URL=http://localhost:5000/api
+```
 
 ## Contributing
 
-Pull requests are welcome! For major changes, please open an issue first.
-
-
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
