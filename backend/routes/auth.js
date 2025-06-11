@@ -7,6 +7,9 @@ const User = require('../models/User');
 const logAction = require('../utils/logAction');
 const { protect,authorize } = require('../middleware/auth');
 const multerUpload = require('../middleware/upload');
+const { v4: uuidv4 } = require('uuid'); 
+
+const Batch = require('../models/Batch');
 
 const router = express.Router();
 
@@ -42,24 +45,50 @@ router.post('/register/individual', protect, authorize('admin'), async (req, res
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new User({
+                const userData = {
             name,
             user_id,
             roll_number,
             password: hashedPassword,
             role
-        });
-
+        };
+        
+        // If student, add batch and semester
+        if (role === 'student') {
+            if (batch) {
+                // Validate batch is one of the allowed values
+                const validBatch = await Batch.findOne({ name: batch });
+                if (!validBatch) {
+                    return res.status(400).json({ message: 'Invalid batch' });
+                }
+                userData.batch = batch;
+            }
+            
+            // Add semester if provided
+            if (semester) {
+                userData.semester = semester;
+            }
+        }
+        
+        const user = new User(userData);
         await user.save();
 
-        // Log the action
+        // Create action details with batch info for logging
+        let actionDetails = `Created user ${user.user_id} (${role})`;
+        if (role === 'student' && batch) {
+            const batchInfo = await Batch.findById(batch).select('name');
+            const batchName = batchInfo ? batchInfo.name : 'unknown batch';
+            actionDetails += ` assigned to batch ${batchName}, semester ${user.semester || 1}`;
+        }
+
         await logAction({
-          user: req.user?.user_id || 'system',
+          user_id: req.user.user_id || 'system',
           action: 'create_user',
-          details: `Created user ${user_id} (${role})`
+          details: actionDetails
         });
 
-        return res.status(201).json({
+        // Return response including batch info if relevant
+        const response = {
             message: 'User registered successfully',
             user: {
                 _id: user._id,
@@ -68,7 +97,14 @@ router.post('/register/individual', protect, authorize('admin'), async (req, res
                 user_id: user.user_id,
                 role: user.role
             }
-        });
+        };
+        
+        if (role === 'student') {
+            response.user.batch = user.batch;
+            response.user.semester = user.semester || 1;
+        }
+
+        return res.status(201).json(response);
 
     } catch (error) {
         console.error('Registration error:', error);
@@ -180,9 +216,9 @@ router.post('/register/bulk', protect, authorize('admin'), multerUpload.single('
 
             // Log the action
             await logAction({
-                user: req.user?.user_id || 'system',
+                user_id: req.user.user_id || 'system',
                 action: 'create_user',
-                details: `Bulk created user ${user_id} (${role})`
+                details: `Bulk created user ${user.user_id} (${role})`
             });
             createdUsers.push({ name: newUser.name, user_id: newUser.user_id, roll_number: newUser.roll_number, role: newUser.role });
         }
@@ -204,21 +240,79 @@ router.post('/login', async (req, res) => {
 
     const user = await User.findOne({ user_id });
     if (!user) {
+        await logAction({
+            user_id: user_id,
+            action: 'login_attempt',
+            details: 'Failed login: invalid user_id',
+            ip: req.headers['x-forwarded-for']?.split(',').shift() ||
+                req.socket?.remoteAddress ||
+                req.connection?.remoteAddress ||
+                '',
+            system_id: req.body.system_id || req.headers['user-agent'] || 'unknown'
+        });
         return res.status(401).json({ message: 'Invalid user_id' });
     }
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+        await logAction({
+            user_id: user_id,
+            action: 'login_attempt',
+            details: 'Failed login: invalid password',
+            ip: req.headers['x-forwarded-for']?.split(',').shift() ||
+                req.socket?.remoteAddress ||
+                req.connection?.remoteAddress ||
+                '',
+            system_id: req.body.system_id || req.headers['user-agent'] || 'unknown'
+        });
         return res.status(401).json({ message: 'Invalid password' });
     }
 
+    // Check for existing session
+    if (user.session_token) {
+        await logAction({
+            user_id: user_id,
+            action: 'login_attempt',
+            details: 'Failed login: user already logged in elsewhere',
+            ip: req.headers['x-forwarded-for']?.split(',').shift() ||
+                req.socket?.remoteAddress ||
+                req.connection?.remoteAddress ||
+                '',
+            system_id: req.body.system_id || req.headers['user-agent'] || 'unknown'
+        });
+        return res.status(401).json({ message: 'User is already logged in elsewhere. Please logout first.' });
+    }
+
+    // Get IP address
+    const ip =
+        req.headers['x-forwarded-for']?.split(',').shift() ||
+        req.socket?.remoteAddress ||
+        req.connection?.remoteAddress ||
+        '';
+
+    // Get system info from request (see next step)
+    const system_id = req.body.system_id || req.headers['user-agent'] || 'unknown';
+
+    // Generate a new session token
+    const sessionToken = uuidv4();
+    user.session_token = sessionToken;
+    await user.save();
+
+    // Include sessionToken in JWT
+    const token = jwt.sign(
+        { id: user._id, user_id: user.user_id, role: user.role, session_token: sessionToken },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+    );
+
     // Log the login action
     await logAction({
-        user: user.user_id,
+        user_id: user.user_id,
         action: 'login',
-        details: `User ${user.user_id} logged in`
+        details: `User logged in from IP: ${ip}, System: ${system_id}`,
+        ip,
+        system_id
     });
 
-    const token = generateToken(user);
     res.status(200).json({
         _id: user._id,
         name: user.name,
@@ -259,7 +353,7 @@ router.put('/update/users/:id', protect, authorize('admin'), async (req, res) =>
         res.json(user);
         // Log the action
         await logAction({
-            user: req.user?.user_id || 'system',
+            user_id: req.user.user_id || 'system',
             action: 'update_user',
             details: `Updated user ${user.user_id} (${user.role})`
         });
@@ -271,14 +365,17 @@ router.put('/update/users/:id', protect, authorize('admin'), async (req, res) =>
 // Delete user
 router.delete('/delete/users/:id', protect, authorize('admin'), async (req, res) => {
   try {
-    await User.findByIdAndDelete(req.params.id);
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
     // Log the action
     await logAction({
-      user: req.user?.user_id || 'system',
+      user_id: req.user.user_id || 'system',
       action: 'delete_user',
-      details: `Deleted user with ID ${req.params.id}`
+      details: `Deleted user with ID ${user.user_id})`
     });
-    res.json({ message: 'User deleted successfully' });
+    res.json({ message: `User ${user.user_id} deleted successfully` });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting user' });
   }

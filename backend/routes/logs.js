@@ -1,4 +1,7 @@
 const express = require('express');
+const { Parser } = require('json2csv');
+const ExcelJS = require('exceljs'); 
+const PDFDocument = require('pdfkit'); 
 const router = express.Router();
 const ServerLog = require('../models/ServerLog');
 const { protect, authorize } = require('../middleware/auth');
@@ -30,9 +33,9 @@ router.delete('/delete_logs', protect, authorize('admin'), async (req, res) => {
     
     // Log this action
     await logAction({
-      user: req.user?.user_id || 'system',
+      user_id: req.user.user_id,
       action: 'delete_logs',
-      details: `Deleted ${result.deletedCount} logs with filters: ${JSON.stringify(filter)}`
+      details: `User ${req.user.user_id} deleted ${result.deletedCount} logs with filters: ${JSON.stringify(filter)}`
     });
     
     res.json({ 
@@ -68,8 +71,6 @@ router.get('/get_logs', protect, authorize('admin'), async (req, res) => {
       .skip(page * rowsPerPage)
       .limit(Number(rowsPerPage));
     
-    console.log(`Found logs: ${logs.length}, Total: ${total}`);
-    
     // Return both the logs and pagination metadata
     res.json({
       logs,
@@ -83,6 +84,127 @@ router.get('/get_logs', protect, authorize('admin'), async (req, res) => {
     console.error('Error fetching logs:', err);
     res.json({ logs: [], pagination: { total: 0, page: 0, rowsPerPage: 10 } });
   }
+});
+
+// CSV
+router.get('/download/csv', protect, authorize('admin'), async (req, res) => {
+  const logs = await ServerLog.find().lean();
+  const fields = ['timestamp', 'user', 'action', 'details'];
+  const parser = new Parser({ fields });
+  const csv = parser.parse(logs);
+  res.header('Content-Type', 'text/csv');
+  res.attachment('server_logs.csv');
+  res.send(csv);
+});
+
+// JSON
+router.get('/download/json', protect, authorize('admin'), async (req, res) => {
+  const logs = await ServerLog.find().lean();
+  res.header('Content-Type', 'application/json');
+  res.attachment('server_logs.json');
+  res.send(JSON.stringify(logs, null, 2));
+});
+
+// Excel
+router.get('/download/excel', protect, authorize('admin'), async (req, res) => {
+  const logs = await ServerLog.find().lean();
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Logs');
+  worksheet.columns = [
+    { header: 'Timestamp', key: 'timestamp', width: 25 },
+    { header: 'User', key: 'user', width: 20 },
+    { header: 'Action', key: 'action', width: 20 },
+    { header: 'Details', key: 'details', width: 40 },
+  ];
+  logs.forEach(log => worksheet.addRow(log));
+  res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.attachment('server_logs.xlsx');
+  await workbook.xlsx.write(res);
+  res.end();
+});
+
+// PDF
+router.get('/download/pdf', protect, authorize('admin'), async (_req, res) => {
+  const logs = await ServerLog.find().lean();
+  const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
+  res.header('Content-Type', 'application/pdf');
+  res.attachment('server_logs.pdf');
+  doc.pipe(res);
+
+  // Table setup
+  const tableTop = 60;
+  const colWidths = [150, 120, 120, 350];
+  const startX = doc.page.margins.left;
+  let y = tableTop;
+
+  // Draw title
+  doc.fontSize(18).text('Server Logs', { align: 'center' });
+  y += 10;
+
+  // Draw header background
+  doc.rect(startX, y, colWidths.reduce((a, b) => a + b), 24).fill('#f5f5f5').stroke();
+  doc.fillColor('#222').fontSize(12);
+
+  // Draw headers
+  let x = startX;
+  ['Timestamp', 'User', 'Action', 'Details'].forEach((header, i) => {
+    doc.text(header, x + 5, y + 6, { width: colWidths[i] - 10, align: 'left' });
+    x += colWidths[i];
+  });
+
+  // Draw header border
+  doc.moveTo(startX, y).lineTo(startX + colWidths.reduce((a, b) => a + b), y).stroke();
+  y += 24;
+
+  // Draw rows with dynamic height
+  logs.forEach((log, idx) => {
+    x = startX;
+    const cellData = [
+      new Date(log.timestamp).toLocaleString(),
+      log.user,
+      log.action,
+      log.details
+    ];
+
+    // Calculate required height for each cell
+    const cellHeights = cellData.map((text, i) =>
+      doc.heightOfString(text || '', {
+        width: colWidths[i] - 10,
+        align: 'left'
+      })
+    );
+    const rowHeight = Math.max(...cellHeights) + 12; // Add padding
+
+    // Alternate row color
+    if (idx % 2 === 0) {
+      doc.rect(x, y, colWidths.reduce((a, b) => a + b), rowHeight).fill('#fafafa').stroke();
+      doc.fillColor('#222');
+    } else {
+      doc.fillColor('#222');
+    }
+
+    // Draw cells
+    x = startX;
+    cellData.forEach((text, i) => {
+      doc.text(text || '', x + 5, y + 6, {
+        width: colWidths[i] - 10,
+        align: 'left'
+      });
+      // Draw cell border
+      doc.rect(x, y, colWidths[i], rowHeight).stroke();
+      x += colWidths[i];
+    });
+
+    y += rowHeight;
+
+    // Add new page if needed
+    if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
+      doc.addPage();
+      y = tableTop;
+    }
+  });
+
+  doc.end();
 });
 
 module.exports = router;

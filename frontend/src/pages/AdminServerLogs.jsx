@@ -11,14 +11,18 @@ import {
   CircularProgress,
   TextField,
   Grid,
-  Toolbar,
   TablePagination,
   TableContainer,
   Button,
-  Stack
+  Stack,
+  Select,
+  MenuItem, 
+  InputLabel, 
+  FormControl
 } from '@mui/material';
 import ClearIcon from '@mui/icons-material/Clear'; 
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'; 
+import DownloadIcon from '@mui/icons-material/Download';
 import AdminSidebar from '../components/AdminSidebar';
 import { debounce } from 'lodash';
 
@@ -28,11 +32,12 @@ const AdminServerLogs = () => {
   const [search, setSearch] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [user, setUser] = useState('');
+  const [user_id, setUser] = useState('');
   const [action, setAction] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
+  const [downloadFormat, setDownloadFormat] = useState('pdf');
 
     const handleClearFilters = () => {
     setSearch('');
@@ -47,9 +52,9 @@ const AdminServerLogs = () => {
     // Build confirmation message based on active filters
     let confirmMessage = 'Are you sure you want to delete';
     
-    if (search || user || action || from || to) {
+    if (search || user_id || action || from || to) {
       confirmMessage += ' the filtered logs';
-      if (user) confirmMessage += ` for user "${user}"`;
+      if (user_id) confirmMessage += ` for user "${user_id}"`;
       if (action) confirmMessage += ` with action "${action}"`;
       if (search) confirmMessage += ` containing "${search}"`;
       if (from || to) {
@@ -71,7 +76,7 @@ const AdminServerLogs = () => {
     try {
       const params = [];
       if (search) params.push(`details=${encodeURIComponent(search)}`);
-      if (user) params.push(`user=${encodeURIComponent(user)}`);
+      if (user_id) params.push(`user=${encodeURIComponent(user_id)}`);
       if (action) params.push(`action=${encodeURIComponent(action)}`);
       if (from) params.push(`from=${from}`);
       if (to) params.push(`to=${to}`);
@@ -109,7 +114,7 @@ const AdminServerLogs = () => {
     try {
       const params = [];
       if (search) params.push(`details=${encodeURIComponent(search)}`);
-      if (user) params.push(`user=${encodeURIComponent(user)}`);
+      if (user_id) params.push(`user=${encodeURIComponent(user_id)}`);
       if (action) params.push(`action=${encodeURIComponent(action)}`);
       if (from) params.push(`from=${from}`);
       if (to) params.push(`to=${to}`);
@@ -144,12 +149,20 @@ const AdminServerLogs = () => {
 
   useEffect(() => {
     setPage(0);
-  }, [search, user, action, from, to]);
+  }, [search, user_id, action, from, to]);
 
   useEffect(() => {
     debouncedFetch();
     return () => debouncedFetch.cancel();
-  }, [search, user, action, from, to, page, rowsPerPage]);
+  }, [search, user_id, action, from, to, page, rowsPerPage]);
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    fetchLogs();
+  }, 5000); // every 5 seconds
+
+  return () => clearInterval(interval);
+}, [search, user_id, action, from, to, page, rowsPerPage]);
 
   const handleChangePage = (_, newPage) => {
     setPage(newPage);
@@ -160,11 +173,28 @@ const AdminServerLogs = () => {
     setPage(0);
   };
 
+  const downloadLogs = (format) => {
+    const token = localStorage.getItem('token');
+    fetch(`/api/logs/download/${format}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `server_logs.${format === 'excel' ? 'xlsx' : format}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      });
+  };
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #282f2f, #becdcd)' }}>
       <AdminSidebar />
       <Box component="main" sx={{ flexGrow: 1, p: 3 ,overflow: 'auto'}}>
-        <Toolbar />
         <Typography variant="h4" gutterBottom color="white" sx={{ mb: 2 }}>
           Server Logs
         </Typography>
@@ -190,7 +220,7 @@ const AdminServerLogs = () => {
             <Grid item xs={12} md={3}>
               <TextField
                 label="User"
-                value={user}
+                value={user_id}
                 onChange={e => setUser(e.target.value)}
                 fullWidth
                 size="small"
@@ -248,6 +278,28 @@ const AdminServerLogs = () => {
             </Typography>
             
             <Stack direction="row" spacing={2}>
+              <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel id="download-format-label">Download Format</InputLabel>
+              <Select
+                labelId="download-format-label"
+                value={downloadFormat}
+                label="Download Format"
+                onChange={e => setDownloadFormat(e.target.value)}
+              >
+                <MenuItem value="csv">CSV</MenuItem>
+                <MenuItem value="json">JSON</MenuItem>
+                <MenuItem value="excel">Excel</MenuItem>
+                <MenuItem value="pdf">PDF</MenuItem>
+              </Select>
+            </FormControl>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={() => downloadLogs(downloadFormat)}
+              size="small"
+            >
+              Download
+            </Button>
               <Button
                 variant="outlined"
                 color="primary"
@@ -289,7 +341,7 @@ const AdminServerLogs = () => {
                         <TableCell
                           sx={{
                             fontWeight: 'bold',
-                            backgroundColor: 'rgba(245,245,245,0.5)',
+                            backgroundColor: 'rgba(245,245,245,1)',
                             position: 'sticky',
                             top: 0,
                             zIndex: 1
@@ -300,7 +352,7 @@ const AdminServerLogs = () => {
                         <TableCell
                           sx={{
                             fontWeight: 'bold',
-                            backgroundColor: 'rgba(245,245,245,0.5)',
+                            backgroundColor: 'rgba(245,245,245,1)',
                             position: 'sticky',
                             top: 0,
                             zIndex: 1
@@ -311,7 +363,7 @@ const AdminServerLogs = () => {
                         <TableCell
                           sx={{
                             fontWeight: 'bold',
-                            backgroundColor: 'rgba(245,245,245,0.5)',
+                            backgroundColor: 'rgba(245,245,245,1)',
                             position: 'sticky',
                             top: 0,
                             zIndex: 1
@@ -322,7 +374,7 @@ const AdminServerLogs = () => {
                         <TableCell
                           sx={{
                             fontWeight: 'bold',
-                            backgroundColor: 'rgba(245,245,245,0.5)',
+                            backgroundColor: 'rgba(245,245,245,1)',
                             position: 'sticky',
                             top: 0,
                             zIndex: 1
@@ -349,7 +401,7 @@ const AdminServerLogs = () => {
                             <TableCell>
                               {log.timestamp ? new Date(log.timestamp).toLocaleString() : ''}
                             </TableCell>
-                            <TableCell>{log.user}</TableCell>
+                            <TableCell>{log.user_id}</TableCell>
                             <TableCell>{log.action}</TableCell>
                             <TableCell>{log.details}</TableCell>
                           </TableRow>
@@ -369,7 +421,8 @@ const AdminServerLogs = () => {
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 sx={{
                   borderTop: '1px solid rgba(224, 224, 224, 1)',
-                  mt: 'auto'
+                  mt: 'auto',
+                  height: '64px'
                 }}
               />
             </>

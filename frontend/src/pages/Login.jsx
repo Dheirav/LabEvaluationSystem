@@ -32,17 +32,10 @@ const Login = () => {
       if (user.role === 'admin') navigate('/admin');
       else if (user.role === 'faculty') navigate('/faculty');
       else if (user.role === 'student') navigate('/student');
-    } catch (err) {
+      } catch (err) {
       console.error('Login error:', err);
       if (err.response?.data?.message) {
-        const msg = err.response.data.message.toLowerCase();
-        if (msg.includes('user')) {
-          setError('Invalid User ID. Please check your User ID and try again.');
-        } else if (msg.includes('password')) {
-          setError('Incorrect password. Please try again.');
-        } else {
-          setError(err.response.data.message);
-        }
+        setError(err.response.data.message);
       } else {
         setError('Login failed. Please check your User ID and password.');
       }

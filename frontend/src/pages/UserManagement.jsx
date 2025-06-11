@@ -18,7 +18,7 @@ import ConfirmDialog from '../components/ConfirmDialog ';
 
 const UserManagement = () => {
   // Individual registration state
-  const [indiv, setIndiv] = useState({ name: '',roll_number: '', user_id: '', password: '', role: 'student' });
+  const [indiv, setIndiv] = useState({ name: '',roll_number: '', user_id: '', password: '', role: 'student',batch: '', semester: '' });
   const [indivLoading, setIndivLoading] = useState(false);
   const [indivMsg, setIndivMsg] = useState({ type: '', text: '' });
   // Bulk registration state
@@ -39,7 +39,10 @@ const UserManagement = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [search, setSearch] = useState('');
-
+  const [batches, setBatches] = useState([]);
+  const [semesters, setSemesters] = useState([1, 2, 3, 4, 5, 6, 7, 8]);
+  const [newBatchDialog, setNewBatchDialog] = useState(false);
+  const [newBatchName, setNewBatchName] = useState(''); 
 
   // Fetch users on component mount
   useEffect(() => {
@@ -123,11 +126,6 @@ const handleDeleteConfirm = async () => {
   }
 };
 
-  // Handle individual form change
-  const handleIndivChange = (e) => {
-    setIndiv({ ...indiv, [e.target.name]: e.target.value });
-  };
-
   // Submit individual registration
   const handleIndivSubmit = async (e) => {
     e.preventDefault();
@@ -178,6 +176,74 @@ const handleDeleteConfirm = async () => {
     }
   };
 
+ useEffect(() => {
+  const fetchBatches = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/batches', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      setBatches(data);
+    } catch (error) {
+      console.error('Error fetching batches:', error);
+    }
+  };
+  
+  fetchBatches();
+}, []); 
+
+  const handleCreateBatch = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/batches', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: newBatchName })
+      });
+      
+      const data = await response.json();
+      if (response.ok) {
+        setBatches([...batches, data]);
+        setIndiv({...indiv, batch: data._id || data.id});
+        setNewBatchDialog(false);
+        setNewBatchName('');
+      } else {
+        setIndivMsg({
+          text: data.message || 'Failed to create batch',
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error creating batch:', error);
+      setIndivMsg({
+        text: 'Failed to create batch: ' + error.message,
+        type: 'error'
+      });
+    }
+  };
+
+  // Modify your handleIndivChange
+  const handleIndivChange = (e) => {
+    const { name, value } = e.target;
+    
+    if (name === 'batch' && value === 'new') {
+      setNewBatchDialog(true);
+      return;
+    }
+    
+    setIndiv({
+      ...indiv,
+      [name]: value
+    });
+  };
+
+
   return (
     <Box 
       sx={{
@@ -189,7 +255,6 @@ const handleDeleteConfirm = async () => {
         overflow: 'hidden',
       }}
     >
-      <Header />
       <AdminSidebar />
       <Box 
         component="main" 
@@ -203,7 +268,6 @@ const handleDeleteConfirm = async () => {
           flexDirection: 'column',
         }}
       >
-        <Toolbar />
         <Box sx={{ p: 3 ,flex: 1,minHeight: 0,overflow: 'auto',display: 'flex', flexDirection: 'column' }}>
           <Typography 
             variant="h4" 
@@ -224,7 +288,7 @@ const handleDeleteConfirm = async () => {
                 background: 'rgba(255,255,255,0.10)',
                 borderRadius: 3,
                 p: 3,
-                height: '115%',
+                height: '200%',
                 minHeight: 0,
                 display: 'flex',
                 flexDirection: 'column',
@@ -340,6 +404,24 @@ const handleDeleteConfirm = async () => {
                           Role
                         </TableSortLabel>
                       </TableCell>
+                       <TableCell
+                            sx={{
+                              backgroundColor: 'rgb(222, 224, 227)',
+                              color: '#222',
+                              fontWeight: 'bold',
+                              py: 1,
+                              zIndex: 2
+                            }}
+                          >
+                            Batch/Semester
+                          <TableSortLabel
+                          active={orderBy === 'role'}
+                          direction={orderBy === 'role' ? order : 'asc'}
+                          onClick={() => handleRequestSort('Batch/Semester')}
+                        >
+                          Role
+                        </TableSortLabel>
+                      </TableCell>
                       <TableCell
                       sx={{
                         backgroundColor: 'rgb(222, 224, 227)',
@@ -387,6 +469,13 @@ const handleDeleteConfirm = async () => {
                                 <span>Admin</span>
                               )}
                             </TableCell>
+                            <TableCell>
+                            {user.role === 'student' ? (
+                              <span>{user.batch ? `Batch ${user.batch}` : '-'} {user.semester ? `/ Sem ${user.semester}` : ''}</span>
+                            ) : (
+                              <span>-</span>
+                            )}
+                          </TableCell>
                               <TableCell>
                                 <IconButton onClick={() => handleEditClick(user)}>
                                   <EditIcon />
@@ -409,8 +498,8 @@ const handleDeleteConfirm = async () => {
                   page={page}
                   onPageChange={handleChangePage}
                   onRowsPerPageChange={handleChangeRowsPerPage}
-
                   sx={{
+                    height: '64px',
                     color: 'black',
                     '.MuiTablePagination-select': {
                       color: 'black'
@@ -454,12 +543,42 @@ const handleDeleteConfirm = async () => {
                     <MenuItem value="faculty">Faculty</MenuItem>
                   </Select>
                 </FormControl>
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-                <Button onClick={handleUpdateUser} variant="contained">Save</Button>
-              </DialogActions>
-            </Dialog>
+                    {editUser?.role === 'student' && (
+                      <>
+                        <FormControl fullWidth sx={{ mt: 2 }}>
+                          <InputLabel>Batch</InputLabel>
+                          <Select
+                            value={editUser?.batch || ''}
+                            onChange={(e) => setEditUser({ ...editUser, batch: e.target.value })}
+                          >
+                            {['N', 'P', 'Q'].map((batch) => (
+                              <MenuItem key={batch} value={batch}>
+                                Batch {batch}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <FormControl fullWidth sx={{ mt: 2 }}>
+                          <InputLabel>Semester</InputLabel>
+                          <Select
+                            value={editUser?.semester || ''}
+                            onChange={(e) => setEditUser({ ...editUser, semester: e.target.value })}
+                          >
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                              <MenuItem key={sem} value={sem}>
+                                Semester {sem}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </>
+                    )}
+                  </DialogContent>
+                  <DialogActions>
+                    <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+                    <Button onClick={handleUpdateUser} variant="contained">Save</Button>
+                  </DialogActions>
+                </Dialog>
 
             {/* Individual Registration Card */}
             <Grid item xs={12} md ={5} sm={5} flex={5} sx = {{height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column'}}>
@@ -480,7 +599,7 @@ const handleDeleteConfirm = async () => {
                     borderRadius: 3,
                     boxShadow: '0 4px 30px rgba(0,0,0,0.1)',
                     p: 3,
-                    width: '90%',
+                    width: '88%',
                     border: '1px solid rgba(255,255,255,0.2)',
                     color: '#222',
                     flexShrink: 0,
@@ -559,6 +678,65 @@ const handleDeleteConfirm = async () => {
                           </Select>
                         </FormControl>
                       </Grid>
+                      {indiv.role === 'student' && (
+                        <>
+                          <Grid item xs={12} sm={6}>
+                            <FormControl 
+                              fullWidth 
+                              variant="outlined" 
+                              sx={{ 
+                                backgroundColor: 'rgba(255,255,255,0.05)',
+                                '& .MuiInputLabel-shrink': {
+                                  transform: 'translate(14px, -9px) scale(0.75)',
+                                }
+                              }}
+                            >
+                              <InputLabel>Batch</InputLabel>
+                              <Select
+                                name="batch"
+                                value={indiv.batch}
+                                onChange={handleIndivChange}
+                                label="Batch"
+                              >
+                                {batches.map((batch) => (
+                                  <MenuItem key={batch._id || batch.id} value={batch._id || batch.id}>
+                                    {batch.name}
+                                  </MenuItem>
+                                ))}
+                                <MenuItem value="new">
+                                  
+                                </MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <FormControl 
+                              fullWidth 
+                              variant="outlined" 
+                              sx={{ 
+                                backgroundColor: 'rgba(255,255,255,0.05)',
+                                '& .MuiInputLabel-shrink': {
+                                  transform: 'translate(14px, -9px) scale(0.75)',
+                                }
+                              }}
+                            >
+                              <InputLabel>Semester</InputLabel>
+                              <Select
+                                name="semester"
+                                value={indiv.semester}
+                                onChange={handleIndivChange}
+                                label="Semester"
+                              >
+                                {semesters.map((sem) => (
+                                  <MenuItem key={sem} value={sem}>
+                                    Semester {sem}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                        </>
+                      )}
                       <Grid item xs={12} sm={6}>
                         <TextField
                           fullWidth
@@ -617,7 +795,7 @@ const handleDeleteConfirm = async () => {
                   border: '1px solid rgba(255,255,255,0.2)',
                   color: '#222',
                   transition: 'transform 0.3s ease',
-                  width: '90%',
+                  width: '88%',
                   display: 'flex',
                   flexDirection: 'column',
                   flexShrink: 0,
@@ -707,6 +885,26 @@ const handleDeleteConfirm = async () => {
             confirmText="Delete"
             cancelText="Cancel"
           />
+          <Dialog open={newBatchDialog} onClose={() => setNewBatchDialog(false)}>
+            <DialogTitle>Create New Batch</DialogTitle>
+            <DialogContent>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Batch Name"
+                fullWidth
+                variant="outlined"
+                value={newBatchName}
+                onChange={(e) => setNewBatchName(e.target.value)}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setNewBatchDialog(false)}>Cancel</Button>
+              <Button onClick={handleCreateBatch} variant="contained" color="primary">
+                Create
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       </Box>
     </Box>

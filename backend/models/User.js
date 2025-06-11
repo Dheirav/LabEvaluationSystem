@@ -10,7 +10,13 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ['admin', 'faculty', 'student'],
         default: 'student',
+         batch: { 
+        type: String,
+        enum: ['N', 'P', 'Q'] 
+        },
+        semester: { type: Number, min: 1, max: 8 }
     },
+    session_token: { type: String, default: null }
  }); 
 
 

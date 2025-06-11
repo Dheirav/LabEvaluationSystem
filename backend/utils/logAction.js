@@ -1,9 +1,9 @@
 const ServerLog = require('../models/ServerLog');
 
-const logAction = async ({ user, action, details }) => {
+const logAction = async ({ user_id, action, details }) => {
   try {
     await ServerLog.create({
-      user,
+      user_id,
       action,
       details
     });
