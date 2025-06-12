@@ -205,7 +205,7 @@ useEffect(() => {
             borderRadius: 3,
             mx: 'auto',
             mt: 2,
-            maxHeight: '70vh',
+            maxHeight: '80vh',
             overflow: 'auto',
             display: 'flex',
             flexDirection: 'column',
@@ -394,8 +394,7 @@ useEffect(() => {
                           <TableRow
                             key={idx}
                             sx={{
-                              '&:nth-of-type(odd)': { backgroundColor: 'rgba(0, 0, 0, 0.02)' },
-                              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+                              backgroundColor: log.details && log.details.includes('ALERT') ? 'rgba(255, 0, 0, 0.5)' : 'transparent'
                             }}
                           >
                             <TableCell>

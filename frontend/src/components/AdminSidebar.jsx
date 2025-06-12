@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { 
+  Avatar,
+  Typography,
   Drawer, 
   List, 
   ListItem, 
   ListItemText, 
-  Toolbar, 
   Box, 
   ListItemIcon, 
   Tooltip, 
@@ -44,10 +45,42 @@ const AdminSidebar = () => {
     { text: 'User Management', path: '/admin/user-management', icon: <PersonAddIcon /> },
   ];
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
+  const handleLogout = async () => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+    } catch (err) {
+      // Optionally handle error (e.g., network issues)
+    }
+  }
+  localStorage.removeItem('token');
+  navigate('/login');
+};
+  let user = null;
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      user = JSON.parse(jsonPayload);
+    } catch {
+      user = null;
+    }
+  }
+
 
   return (
     <Drawer
@@ -71,97 +104,144 @@ const AdminSidebar = () => {
         }
       }}
     >
-      <div>
-        <Toolbar 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: open ? 'flex-end' : 'center',
-            px: [1],
-            minHeight: '64px', 
+    <Box
+      sx={{
+        p: open ? 2 : 1,
+        textAlign: 'center',
+        borderBottom: '1px solid #374151',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight:  50,
+        transition: 'all 0.2s'
+      }}
+    >
+      {user && (
+        <>
+          <Avatar
+            sx={{
+              mx: 'auto',
+              mb: open ? 1 : 0,
+              bgcolor: '#90caf9',
+              width: 40,
+              height: 40,
+              fontSize: 24,
+              transition: 'all 0.2s'
+            }}
+          >
+            {user.name ? user.name[0] : user.user_id[0]}
+          </Avatar>
+          {open && (
+            <>
+              <Typography variant="subtitle1" color="white" noWrap>
+                {user.name}
+              </Typography>
+              <Typography variant="body2" color="gray" noWrap>
+                {user.role}
+              </Typography>
+              <Typography variant="body2" color="gray" noWrap>
+                {user.user_id}
+              </Typography>
+            </>
+          )}
+        </>
+      )}
+    </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: open ? 'flex-end' : 'center', p: 0, m: 0, minHeight: 0 }}>
+        <IconButton
+          onClick={handleDrawerToggle}
+          sx={{
+            color: 'white',
+            p: 1,
+            m: 0,
+            minHeight: 0,
+            minWidth: 0,
+            alignContent: 'center',
           }}
         >
-          <IconButton onClick={handleDrawerToggle} sx={{ color: 'white' }}>
-            {open ? <ChevronLeftIcon /> : <MenuIcon />}
-          </IconButton>
-        </Toolbar>
-        <Divider sx={{ bgcolor: '#374151' }} />
-        <Box sx={{ overflow: 'auto' }}>
-          <List>
-            {items.map(({ text, path, icon }) => (
-              <Tooltip title={!open ? text : ''} placement="right" key={text} arrow>
-                <ListItem
+          {open ? <ChevronLeftIcon /> : <MenuIcon />}
+        </IconButton>
+      </Box>
+            <Divider sx={{ bgcolor: '#374151', my: 0 }} />
+            <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
+              <List sx={{ alignItems: 'center' }}>
+              {items.map(({ text, path, icon }) => (
+                <Tooltip title={!open ? text : ''} placement="right" key={text} arrow>
+                  <ListItem
+                    button
+                    selected={location.pathname === path}
+                    onClick={() => navigate(path)}
+                    sx={{
+                      justifyContent: open ? 'flex-start' : 'center',
+                      alignItems: 'center',
+                      px: open ? 2.5 : 0,
+                      '&.Mui-selected': {
+                        backgroundColor: '#374151',
+                        color: '#90caf9',
+                        fontWeight: 600
+                      },
+                      '&:hover': {
+                        backgroundColor: '#2d3748',
+                        color: '#90caf9'
+                      },
+                      borderRadius: 2,
+                      mx: 1,
+                      my: 0.5,
+                      minHeight: 48,
+                    }}
+                  >
+                    <ListItemIcon 
+                      sx={{ 
+                        color: 'inherit', 
+                        minWidth: 0,
+                        mr: open ? 3 : 2,
+                        justifyContent: 'center',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      {icon}
+                    </ListItemIcon>
+                    {open && <ListItemText primary={text} />}
+                  </ListItem>
+                </Tooltip>
+              ))}
+            </List>
+            </Box>
+            <Box sx={{ mb: 2 }}>
+              <List>
+                <ListItem 
                   button
-                  selected={location.pathname === path}
-                  onClick={() => navigate(path)}
+                  onClick={handleLogout} 
                   sx={{
                     minHeight: 48,
                     justifyContent: open ? 'initial' : 'center',
-                    px: 2.5,
-                    '&.Mui-selected': {
-                      backgroundColor: '#374151',
-                      color: '#90caf9',
-                      fontWeight: 600
-                    },
-                    '&:hover': {
-                      backgroundColor: '#2d3748',
-                      color: '#90caf9'
-                    },
+                    px: open ? 2.5 : 1,
+                    '&:hover': { backgroundColor: '#2d3748', color: '#f87171' },
+                    color: '#f87171',
                     borderRadius: 2,
                     mx: 1,
-                    my: 0.5
+                    mt: 1
                   }}
                 >
                   <ListItemIcon 
                     sx={{ 
                       color: 'inherit', 
                       minWidth: 0,
-                      mr: open ? 3 : 'auto',
-                      justifyContent: 'center'
+                      mr: open ? 3 : 2,
+                      justifyContent: 'center',
+                      display: 'flex',
                     }}
                   >
-                    {icon}
+                    <LogoutIcon />
                   </ListItemIcon>
-                  {open && <ListItemText primary={text} />}
+                  {open && <ListItemText primary="Logout" />}
                 </ListItem>
-              </Tooltip>
-            ))}
-          </List>
-        </Box>
-      </div>
-      <Box sx={{ mb: 2 }}>
-        <Divider sx={{ bgcolor: '#374151' }} />
-        <List>
-          <ListItem 
-            button
-            onClick={handleLogout} 
-            sx={{
-              minHeight: 48,
-              justifyContent: open ? 'initial' : 'center',
-              px: 2.5,
-              '&:hover': { backgroundColor: '#2d3748', color: '#f87171' },
-              color: '#f87171',
-              borderRadius: 2,
-              mx: 1,
-              mt: 1
-            }}
-          >
-            <ListItemIcon 
-              sx={{ 
-                color: 'inherit', 
-                minWidth: 0,
-                mr: open ? 3 : 'auto',
-                justifyContent: 'center'
-              }}
-            >
-              <LogoutIcon />
-            </ListItemIcon>
-            {open && <ListItemText primary="Logout" />}
-          </ListItem>
-        </List>
-      </Box>
-    </Drawer>
-  );
-};
+              </List>
+            </Box>
+          </Drawer>
+        );
+      };
 
 export default AdminSidebar;

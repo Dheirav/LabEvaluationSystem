@@ -272,7 +272,7 @@ router.post('/login', async (req, res) => {
         await logAction({
             user_id: user_id,
             action: 'login_attempt',
-            details: 'Failed login: user already logged in elsewhere',
+            details: 'ALERT: user already logged in elsewhere',
             ip: req.headers['x-forwarded-for']?.split(',').shift() ||
                 req.socket?.remoteAddress ||
                 req.connection?.remoteAddress ||
@@ -378,6 +378,29 @@ router.delete('/delete/users/:id', protect, authorize('admin'), async (req, res)
     res.json({ message: `User ${user.user_id} deleted successfully` });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting user' });
+  }
+});
+
+// Add this route before module.exports
+router.post('/logout', protect, async (req, res) => {
+  try {
+    // req.user is set by your protect middleware and contains the user's ID
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    user.session_token = null;
+    await user.save();
+
+    await logAction({
+      user_id: user.user_id,
+      action: 'logout',
+      details: 'User logged out and session_token cleared'
+    });
+
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Logout failed' });
   }
 });
 

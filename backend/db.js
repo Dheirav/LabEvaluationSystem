@@ -2,7 +2,6 @@
 
 // Developer CLI tool for CRUD operations on any MongoDB collection (menu-based, field prompts for users, bcrypt password, pick-to-delete)
 // Usage: node dev_crud.js
-// Requires: npm install inquirer bcryptjs
 
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
@@ -100,7 +99,31 @@ async function updateDocument(collection) {
   }
 }
 
-// Replace the existing deleteDocument function with this:
+async function clearUserSessionToken() {
+  const users = await mongoose.connection.db.collection('users').find({}).toArray();
+  if (users.length === 0) {
+    console.log('No users found.');
+    return;
+  }
+  const choices = users.map(u => ({
+    name: `${u.name} (${u.user_id}, ${u.role}) [${u._id}]`,
+    value: u._id.toString()
+  }));
+  const { id } = await inquirer.prompt([
+    { type: 'list', name: 'id', message: 'Select user to clear session token:', choices }
+  ]);
+  const { ObjectId } = require('mongodb');
+  const result = await mongoose.connection.db.collection('users').updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { session_token: null } }
+  );
+  if (result.modifiedCount === 1) {
+    console.log('Session token cleared.');
+  } else {
+    console.log('No changes made.');
+  }
+}
+
 async function deleteDocument(collection) {
   if (collection === 'users') {
     const docs = await mongoose.connection.db.collection('users').find({}).toArray();
@@ -222,6 +245,7 @@ async function mainMenu() {
           'Create document',
           'Update document',
           'Delete document',
+          'Clear user session token',
           'Exit'
         ]
       }
@@ -254,6 +278,8 @@ async function mainMenu() {
         await updateDocument(collection);
       } else if (action === 'Delete document') {
         await deleteDocument(collection);
+      } else if (action === 'Clear user session token') {
+        await clearUserSessionToken();
       }
     }
     console.log('\n---');
