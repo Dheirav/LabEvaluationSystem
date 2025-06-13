@@ -4,8 +4,6 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth');
 const logsRoutes = require('./routes/logs');
-const batchRoutes = require('./routes/batches');
-const ensureBatchesExist = require('./utils/batchCheck');
 
 (async () => {
   // Load environment variables
@@ -21,7 +19,6 @@ const ensureBatchesExist = require('./utils/batchCheck');
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('Connected to MongoDB');
-    ensureBatchesExist(); // Ensure batches exist after connecting
   } catch (err) {
     console.error('MongoDB connection error:', err);
   }
@@ -29,7 +26,6 @@ const ensureBatchesExist = require('./utils/batchCheck');
   // Routes
   app.use('/api/auth', authRoutes);
   app.use('/api/logs', logsRoutes);
-  app.use('/api/batches', batchRoutes);
 
   // Error handling middleware
   app.use((err, req, res, next) => {

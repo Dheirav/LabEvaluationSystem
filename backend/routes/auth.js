@@ -9,21 +9,14 @@ const { protect,authorize } = require('../middleware/auth');
 const multerUpload = require('../middleware/upload');
 const { v4: uuidv4 } = require('uuid'); 
 
-const Batch = require('../models/Batch');
-
 const router = express.Router();
 
-const generateToken = (user) => {
-    return jwt.sign(
-        { id: user._id, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: '7d' }
-    );
-}
+const allowedBatches = ['N', 'P', 'Q'];
+
 
 router.post('/register/individual', protect, authorize('admin'), async (req, res) => {
     try {
-        const { name, user_id, password, role, roll_number } = req.body;
+        const { name, user_id, password, role, roll_number, batch, semester } = req.body;
         
         if(!['faculty', 'student'].includes(role)) {
             return res.status(400).json({ message: 'Invalid role' });
@@ -57,8 +50,7 @@ router.post('/register/individual', protect, authorize('admin'), async (req, res
         if (role === 'student') {
             if (batch) {
                 // Validate batch is one of the allowed values
-                const validBatch = await Batch.findOne({ name: batch });
-                if (!validBatch) {
+                if (!allowedBatches.includes(batch)) {
                     return res.status(400).json({ message: 'Invalid batch' });
                 }
                 userData.batch = batch;
@@ -75,9 +67,8 @@ router.post('/register/individual', protect, authorize('admin'), async (req, res
 
         // Create action details with batch info for logging
         let actionDetails = `Created user ${user.user_id} (${role})`;
-        if (role === 'student' && batch) {
-            const batchInfo = await Batch.findById(batch).select('name');
-            const batchName = batchInfo ? batchInfo.name : 'unknown batch';
+        if (role === 'student' && user.batch) {
+            const batchName = allowedBatches.includes(user.batch) ? user.batch : 'Unknown batch';
             actionDetails += ` assigned to batch ${batchName}, semester ${user.semester || 1}`;
         }
 
@@ -193,13 +184,13 @@ router.post('/register/bulk', protect, authorize('admin'), multerUpload.single('
 
 
         for (const entry of parsedUsers) {
-            const { name, user_id, roll_number, password, role } = entry;
-
+            const { name, user_id, roll_number, password, role, batch, semester } = entry;
+        
             if (!name || !user_id || !roll_number || !password || !['student', 'faculty'].includes(role)) {
                 errors.push({ user_id, message: 'Invalid or missing fields' });
                 continue;
             }
-
+        
             const existing = await User.findOne({ 
                 $or: [
                     { user_id },
@@ -210,17 +201,33 @@ router.post('/register/bulk', protect, authorize('admin'), multerUpload.single('
                 errors.push({ user_id, message: existing.user_id === user_id ? 'User already exists' : 'Roll number already exists' });
                 continue;
             }
-
-            const newUser = new User({ name, user_id, roll_number, password, role });
+        
+            const userData = { name, user_id, roll_number, password, role };
+        
+            // If student, add batch and semester
+            if (role === 'student') {
+                if (batch) {
+                    if (!allowedBatches.includes(batch)) {
+                        errors.push({ user_id, message: 'Invalid batch' });
+                        continue;
+                    }
+                    userData.batch = batch;
+                }
+                if (semester) {
+                    userData.semester = semester;
+                }
+            }
+        
+            const newUser = new User(userData);
             await newUser.save();
-
+        
             // Log the action
             await logAction({
                 user_id: req.user.user_id || 'system',
                 action: 'create_user',
-                details: `Bulk created user ${user.user_id} (${role})`
+                details: `Bulk created user ${newUser.user_id} (${role})${userData.batch ? ` assigned to batch ${userData.batch}` : ''}${userData.semester ? `, semester ${userData.semester}` : ''}`
             });
-            createdUsers.push({ name: newUser.name, user_id: newUser.user_id, roll_number: newUser.roll_number, role: newUser.role });
+            createdUsers.push({ name: newUser.name, user_id: newUser.user_id, roll_number: newUser.roll_number, role: newUser.role, batch: newUser.batch, semester: newUser.semester });
         }
 
         return res.status(207).json({
@@ -333,17 +340,23 @@ router.get('/get_users', protect, authorize('admin'), async (req, res) => {
     res.status(500).json({ message: 'Error fetching users' });
   }
 });
+
 // Update user
 router.put('/update/users/:id', protect, authorize('admin'), async (req, res) => {
     try {
         const updateFields = { ...req.body };
-        // Only allow updating allowed fields
-        const allowedFields = ['name', 'user_id', 'roll_number', 'role'];
+        // Allow updating these fields
+        const allowedFields = ['name', 'user_id', 'roll_number', 'role', 'batch', 'semester'];
         Object.keys(updateFields).forEach(key => {
             if (!allowedFields.includes(key)) {
                 delete updateFields[key];
             }
         });
+
+        // Validate batch if present
+        if (updateFields.batch && !allowedBatches.includes(updateFields.batch)) {
+            return res.status(400).json({ message: 'Invalid batch' });
+        }
 
         const user = await User.findByIdAndUpdate(
             req.params.id,
