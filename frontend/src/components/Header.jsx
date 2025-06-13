@@ -1,7 +1,7 @@
 import React from 'react';
 import { AppBar, Toolbar, Typography } from '@mui/material';
 
-const Header = () => (
+const Header = ({ title = "Lab Evaluation System - Admin" }) => (
   <AppBar 
     position="fixed" 
     sx={{
@@ -10,7 +10,7 @@ const Header = () => (
   >
     <Toolbar>
       <Typography variant="h6" noWrap>
-        Lab Evaluation System - Admin
+        {title}
       </Typography>
     </Toolbar>
   </AppBar>

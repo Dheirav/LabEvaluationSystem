@@ -14,6 +14,9 @@ const router = express.Router();
 const allowedBatches = ['N', 'P', 'Q'];
 
 
+<<<<<<< HEAD
+// ...existing registration and bulk registration routes...
+=======
 router.post('/register/individual', protect, authorize('admin'), async (req, res) => {
     try {
         const { name, user_id, password, role, roll_number, batch, semester } = req.body;
@@ -241,6 +244,7 @@ router.post('/register/bulk', protect, authorize('admin'), multerUpload.single('
         return res.status(500).json({ message: 'Failed to process file' });
     }
 });
+>>>>>>> origin/main
 
 router.post('/login', async (req, res) => {
     const { user_id, password } = req.body;
@@ -274,19 +278,19 @@ router.post('/login', async (req, res) => {
         return res.status(401).json({ message: 'Invalid password' });
     }
 
-    // Check for existing session
-    if (user.session_token) {
+    // Only block concurrent login for students
+    if (user.role === 'student' && user.session_token) {
         await logAction({
             user_id: user_id,
             action: 'login_attempt',
-            details: 'ALERT: user already logged in elsewhere',
+            details: 'ALERT: student already logged in elsewhere',
             ip: req.headers['x-forwarded-for']?.split(',').shift() ||
                 req.socket?.remoteAddress ||
                 req.connection?.remoteAddress ||
                 '',
             system_id: req.body.system_id || req.headers['user-agent'] || 'unknown'
         });
-        return res.status(401).json({ message: 'User is already logged in elsewhere. Please logout first.' });
+        return res.status(401).json({ message: 'Student is already logged in elsewhere. Please logout first.' });
     }
 
     // Get IP address
@@ -296,7 +300,7 @@ router.post('/login', async (req, res) => {
         req.connection?.remoteAddress ||
         '';
 
-    // Get system info from request (see next step)
+    // Get system info from request
     const system_id = req.body.system_id || req.headers['user-agent'] || 'unknown';
 
     // Generate a new session token
@@ -330,6 +334,7 @@ router.post('/login', async (req, res) => {
     });
 });
 
+// ...rest of your routes (get_users, update, delete, logout, etc.)...
 
 // Get all users
 router.get('/get_users', protect, authorize('admin'), async (req, res) => {
@@ -418,19 +423,3 @@ router.post('/logout', protect, async (req, res) => {
 });
 
 module.exports = router;
-
-// This code defines an Express.js router for user authentication, including registration and login functionality.
-// It uses JWT for token generation and includes middleware for protecting routes and authorizing user roles.         
-// The `/register` route allows an admin to create new users with specified roles (faculty or student).
-// The `/login` route allows users to authenticate with their user_id and password, returning a JWT token upon successful login.
-// The code also includes error handling for duplicate users and invalid credentials.
-// The `generateToken` function creates a JWT token with the user's ID and role, which is used for subsequent authentication.
-// The router is exported for use in the main application file, allowing it to be mounted on a specific path (e.g., `/api/auth`).
-// The code uses async/await for asynchronous operations, ensuring clean and readable code.
-// The `protect` and `authorize` middleware functions are used to secure the routes, ensuring that only authenticated users with the appropriate roles can access certain endpoints.
-// The code is designed to be modular and reusable, allowing for easy integration into larger applications.
-// The use of environment variables (e.g., `process.env.JWT_SECRET`) for sensitive information like the JWT secret key enhances security by keeping such data out of the source code.
-// The code follows best practices for user authentication and authorization in a Node.js application, ensuring secure handling of user credentials and roles.
-// The `User` model is imported from a separate file, promoting separation of concerns and making the codebase more maintainable.
-// The code is structured to allow for future expansion, such as adding more user roles or additional authentication features.
-// The use of Mongoose for database interactions simplifies the process of working with MongoDB, providing a clear schema definition and built-in methods for common operations.    

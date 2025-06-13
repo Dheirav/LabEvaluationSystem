@@ -15,7 +15,7 @@ const AdminDashboard = () => {
         padding: 0,
       }}
     >
-      <Header />
+      <Header title="Lab Evaluation System - Admin" />
       <AdminSidebar />
       
       <Box 
