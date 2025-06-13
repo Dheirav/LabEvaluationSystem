@@ -4,6 +4,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth');
 const logsRoutes = require('./routes/logs');
+const facultyRoutes = require('./routes/faculty');
 
 (async () => {
   // Load environment variables
@@ -26,11 +27,7 @@ const logsRoutes = require('./routes/logs');
   // Routes
   app.use('/api/auth', authRoutes);
   app.use('/api/logs', logsRoutes);
-<<<<<<< HEAD
-  app.use('/api/batches', batchRoutes);
-  app.use('/api/faculty', require('./routes/faculty'));
-=======
->>>>>>> origin/main
+  app.use('/api/faculty', facultyRoutes);
 
   // Error handling middleware
   app.use((err, req, res, next) => {

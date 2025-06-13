@@ -13,10 +13,7 @@ const router = express.Router();
 
 const allowedBatches = ['N', 'P', 'Q'];
 
-
-<<<<<<< HEAD
-// ...existing registration and bulk registration routes...
-=======
+// Register individual user
 router.post('/register/individual', protect, authorize('admin'), async (req, res) => {
     try {
         const { name, user_id, password, role, roll_number, batch, semester } = req.body;
@@ -39,13 +36,11 @@ router.post('/register/individual', protect, authorize('admin'), async (req, res
                     : 'Roll number already exists'
             });
         }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-                const userData = {
+        const userData = {
             name,
             user_id,
             roll_number,
-            password: hashedPassword,
+            password: password,
             role
         };
         
@@ -244,12 +239,14 @@ router.post('/register/bulk', protect, authorize('admin'), multerUpload.single('
         return res.status(500).json({ message: 'Failed to process file' });
     }
 });
->>>>>>> origin/main
 
 router.post('/login', async (req, res) => {
     const { user_id, password } = req.body;
 
     const user = await User.findOne({ user_id });
+    console.log('Login attempt:', { user_id, password });
+    console.log('User found:', user );
+
     if (!user) {
         await logAction({
             user_id: user_id,
@@ -263,7 +260,9 @@ router.post('/login', async (req, res) => {
         });
         return res.status(401).json({ message: 'Invalid user_id' });
     }
-    const isMatch = await user.comparePassword(password);
+    const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Comparing password:', { entered: password, stored: user.password  , isMatch});
+    
     if (!isMatch) {
         await logAction({
             user_id: user_id,
@@ -333,8 +332,6 @@ router.post('/login', async (req, res) => {
         token
     });
 });
-
-// ...rest of your routes (get_users, update, delete, logout, etc.)...
 
 // Get all users
 router.get('/get_users', protect, authorize('admin'), async (req, res) => {

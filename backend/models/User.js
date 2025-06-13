@@ -6,20 +6,18 @@ const userSchema = new mongoose.Schema({
     user_id: {type: String, required: true, unique: true},
     roll_number: {type: String, required: true, unique: true},
     password: {type: String, required: true},
-    role:{
+    role: {
         type: String,
         enum: ['admin', 'faculty', 'student'],
-        default: 'student',
-         batch: { 
+        default: 'student'
+    },
+    batch: {  
         type: String,
         enum: ['N', 'P', 'Q'] 
-        },
-        semester: { type: Number, min: 1, max: 8 }
     },
+    semester: { type: Number, min: 1, max: 8 }, 
     session_token: { type: String, default: null }
- }); 
-
-
+});
 //
 userSchema.pre('save', async function(next) {
     if (this.isModified('password')) {
