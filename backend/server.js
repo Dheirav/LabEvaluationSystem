@@ -30,6 +30,7 @@ const ensureBatchesExist = require('./utils/batchCheck');
   app.use('/api/auth', authRoutes);
   app.use('/api/logs', logsRoutes);
   app.use('/api/batches', batchRoutes);
+  app.use('/api/faculty', require('./routes/faculty'));
 
   // Error handling middleware
   app.use((err, req, res, next) => {

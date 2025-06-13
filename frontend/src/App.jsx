@@ -1,12 +1,16 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
-import FacultyDashboard from './pages/FacultyDashboard';
+import FacultyDashboard from './pages/faculty/FacultyDashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import AdminServerLogs from './pages/AdminServerLogs';
 import UserManagement from './pages/UserManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import FacultyEvaluations from './pages/faculty/FacultyEvaluations';
+import FacultyStudents from './pages/faculty/FacultyStudents';
+import FacultySchedule from './pages/faculty/FacultySchedule';
+import FacultyQuestionPool from './pages/faculty/FacultyQuestionPool';
 
 function App() {
   return (
@@ -43,6 +47,30 @@ function App() {
           <Route path="/admin/server-logs" element={
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminServerLogs />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/faculty/evaluations" element={
+            <ProtectedRoute allowedRoles={['faculty']}>
+              <FacultyEvaluations />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/faculty/students" element={
+            <ProtectedRoute allowedRoles={['faculty']}>
+              <FacultyStudents />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/faculty/schedule" element={
+            <ProtectedRoute allowedRoles={['faculty']}>
+              <FacultySchedule />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/faculty/question-pool" element={
+            <ProtectedRoute allowedRoles={['faculty']}>
+              <FacultyQuestionPool />
             </ProtectedRoute>
           } />
 
