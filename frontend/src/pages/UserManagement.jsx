@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../App.css';
-import Header from '../components/Header';
 import AdminSidebar from '../components/AdminSidebar';
 import { 
-  Box, Toolbar, Typography, Grid, Paper, TextField, Button, 
+  Box, Typography, Grid, Paper, TextField, Button, 
   FormControl, InputLabel, Select, MenuItem, Table, 
   TableBody, TableCell, TableContainer, TableHead, 
   TableRow, IconButton, Dialog, DialogTitle, 
@@ -18,7 +17,7 @@ import ConfirmDialog from '../components/ConfirmDialog ';
 
 const UserManagement = () => {
   // Individual registration state
-  const [indiv, setIndiv] = useState({ name: '',roll_number: '', user_id: '', password: '', role: 'student',batch: '', semester: '' });
+  const [indiv, setIndiv] = useState({ name: '',roll_number: '', user_id: '', password: '', role: 'student',batch: 'N', semester: '1' });
   const [indivLoading, setIndivLoading] = useState(false);
   const [indivMsg, setIndivMsg] = useState({ type: '', text: '' });
   // Bulk registration state
@@ -39,8 +38,7 @@ const UserManagement = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [search, setSearch] = useState('');
-  const [batches, setBatches] = useState([]);
-  const [semesters, setSemesters] = useState([1, 2, 3, 4, 5, 6, 7, 8]);
+  const [semesters] = useState([1, 2, 3, 4, 5, 6, 7, 8]);
   const [newBatchDialog, setNewBatchDialog] = useState(false);
   const [newBatchName, setNewBatchName] = useState(''); 
 
@@ -67,7 +65,7 @@ const UserManagement = () => {
     setOrderBy(property);
   };
   
-  const handleChangePage = (event, newPage) => {
+  const handleChangePage = (_event, newPage) => {
     setPage(newPage);
   };
   
@@ -176,67 +174,9 @@ const handleDeleteConfirm = async () => {
     }
   };
 
- useEffect(() => {
-  const fetchBatches = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/batches', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      setBatches(data);
-    } catch (error) {
-      console.error('Error fetching batches:', error);
-    }
-  };
-  
-  fetchBatches();
-}, []); 
-
-  const handleCreateBatch = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/batches', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ name: newBatchName })
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        setBatches([...batches, data]);
-        setIndiv({...indiv, batch: data._id || data.id});
-        setNewBatchDialog(false);
-        setNewBatchName('');
-      } else {
-        setIndivMsg({
-          text: data.message || 'Failed to create batch',
-          type: 'error'
-        });
-      }
-    } catch (error) {
-      console.error('Error creating batch:', error);
-      setIndivMsg({
-        text: 'Failed to create batch: ' + error.message,
-        type: 'error'
-      });
-    }
-  };
-
   // Modify your handleIndivChange
   const handleIndivChange = (e) => {
     const { name, value } = e.target;
-    
-    if (name === 'batch' && value === 'new') {
-      setNewBatchDialog(true);
-      return;
-    }
-    
     setIndiv({
       ...indiv,
       [name]: value
@@ -698,14 +638,11 @@ const handleDeleteConfirm = async () => {
                                 onChange={handleIndivChange}
                                 label="Batch"
                               >
-                                {batches.map((batch) => (
-                                  <MenuItem key={batch._id || batch.id} value={batch._id || batch.id}>
-                                    {batch.name}
+                                {['N', 'P', 'Q'].map((batch) => (
+                                  <MenuItem key={batch} value={batch}>
+                                    Batch {batch}
                                   </MenuItem>
                                 ))}
-                                <MenuItem value="new">
-                                  
-                                </MenuItem>
                               </Select>
                             </FormControl>
                           </Grid>
@@ -885,26 +822,7 @@ const handleDeleteConfirm = async () => {
             confirmText="Delete"
             cancelText="Cancel"
           />
-          <Dialog open={newBatchDialog} onClose={() => setNewBatchDialog(false)}>
-            <DialogTitle>Create New Batch</DialogTitle>
-            <DialogContent>
-              <TextField
-                autoFocus
-                margin="dense"
-                label="Batch Name"
-                fullWidth
-                variant="outlined"
-                value={newBatchName}
-                onChange={(e) => setNewBatchName(e.target.value)}
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setNewBatchDialog(false)}>Cancel</Button>
-              <Button onClick={handleCreateBatch} variant="contained" color="primary">
-                Create
-              </Button>
-            </DialogActions>
-          </Dialog>
+        
         </Box>
       </Box>
     </Box>
