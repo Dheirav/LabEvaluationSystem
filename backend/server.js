@@ -26,11 +26,8 @@ const logsRoutes = require('./routes/logs');
   // Routes
   app.use('/api/auth', authRoutes);
   app.use('/api/logs', logsRoutes);
-<<<<<<< HEAD
-  app.use('/api/batches', batchRoutes);
+  
   app.use('/api/faculty', require('./routes/faculty'));
-=======
->>>>>>> origin/main
 
   // Error handling middleware
   app.use((err, req, res, next) => {
