@@ -4,6 +4,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth');
 const logsRoutes = require('./routes/logs');
+const adminRoutes = require('./routes/admin'); // Import admin routes
 
 (async () => {
   // Load environment variables
@@ -26,6 +27,7 @@ const logsRoutes = require('./routes/logs');
   // Routes
   app.use('/api/auth', authRoutes);
   app.use('/api/logs', logsRoutes);
+  app.use('/api/admin', adminRoutes); // Use admin routes
   
   app.use('/api/faculty', require('./routes/faculty'));
 

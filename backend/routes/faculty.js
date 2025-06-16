@@ -46,6 +46,135 @@ router.get('/question-pool', protect, authorize('faculty'), async (req, res) => 
   res.json(courses);
 });
 
+// Grade an evaluation
+router.put('/evaluations/:id/grade', protect, authorize('faculty'), async (req, res) => {
+  try {
+    const evaluation = await Evaluation.findById(req.params.id);
+
+    if (!evaluation) {
+      return res.status(404).json({ message: 'Evaluation not found' });
+    }
+
+    if (evaluation.faculty.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to grade this evaluation' });
+    }
+
+    evaluation.marks = req.body.marks;
+    evaluation.status = 'graded'; // Or 'completed'
+    await evaluation.save();
+
+    res.json({ message: 'Evaluation graded successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Create a new question
+router.post('/questions', protect, authorize('faculty'), async (req, res) => {
+  try {
+    const { text, test } = req.body;
+
+    const newQuestion = new Question({
+      text,
+      test
+    });
+
+    const question = await newQuestion.save();
+
+    // Update the Test model to include the new question
+    const testObj = await Test.findById(test);
+    if (testObj) {
+      testObj.questions.push(question._id);
+      await testObj.save();
+    }
+
+    res.status(201).json({ message: 'Question created successfully', question });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get reports
+router.get('/reports', protect, authorize('faculty'), async (req, res) => {
+  try {
+    const { course, type } = req.query;
+
+    if (!course || !type) {
+      return res.status(400).json({ message: 'Course and report type are required' });
+    }
+
+    let reportData = [];
+
+    switch (type) {
+      case 'performance':
+        // Fetch class performance data
+        const courseObj = await Course.findById(course).populate('evaluations');
+        if (!courseObj) {
+          return res.status(404).json({ message: 'Course not found' });
+        }
+
+        const evaluations = courseObj.evaluations;
+        let totalMarks = 0;
+        evaluations.forEach(ev => {
+          totalMarks += ev.marks || 0;
+        });
+        const averageMarks = evaluations.length > 0 ? totalMarks / evaluations.length : 0;
+
+        // Assuming pass mark is 40
+        const passPercentage = evaluations.filter(ev => ev.marks >= 40).length / evaluations.length * 100;
+
+        reportData = [{ averageMarks, passPercentage }];
+        break;
+      case 'progress':
+        // Fetch student progress data
+        const courseObj2 = await Course.findById(course).populate({
+          path: 'students',
+          populate: { path: 'evaluations' }
+        });
+        if (!courseObj2) {
+          return res.status(404).json({ message: 'Course not found' });
+        }
+
+        reportData = courseObj2.students.map(student => {
+          return {
+            student: student.name,
+            evaluations: student.evaluations.map(ev => ({
+              test: ev.name,
+              marks: ev.marks
+            }))
+          };
+        });
+        break;
+      case 'attendance':
+        // Fetch attendance data
+        const courseObj3 = await Course.findById(course).populate('students');
+        if (!courseObj3) {
+          return res.status(404).json({ message: 'Course not found' });
+        }
+
+        reportData = courseObj3.students.map(student => {
+          // Assuming attendance is stored in student model
+          return {
+            student: student.name,
+            attended: student.attended || 0,
+            total: student.totalClasses || 0,
+            percentage: student.attended / student.totalClasses * 100 || 0
+          };
+        });
+        break;
+      default:
+        return res.status(400).json({ message: 'Invalid report type' });
+    }
+
+    res.json(reportData);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Add/edit/delete question pool endpoints as needed...
 
 module.exports = router;
