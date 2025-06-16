@@ -8,9 +8,11 @@ import UserManagement from './pages/UserManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import FacultyEvaluations from './pages/faculty/FacultyEvaluations';
+import CourseManagement from './pages/CourseManagement';
 import FacultyStudents from './pages/faculty/FacultyStudents';
 import FacultySchedule from './pages/faculty/FacultySchedule';
 import FacultyQuestionPool from './pages/faculty/FacultyQuestionPool';
+import FacultyReports from './pages/faculty/FacultyReports';
 
 function App() {
   return (
@@ -71,6 +73,18 @@ function App() {
           <Route path="/faculty/question-pool" element={
             <ProtectedRoute allowedRoles={['faculty']}>
               <FacultyQuestionPool />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/faculty/reports" element={
+            <ProtectedRoute allowedRoles={['faculty']}>
+              <FacultyReports />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/course-management" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <CourseManagement />
             </ProtectedRoute>
           } />
 

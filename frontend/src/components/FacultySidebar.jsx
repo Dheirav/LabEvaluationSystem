@@ -41,6 +41,7 @@ export default function FacultySidebar({ facultyName }) {
     { text: 'Students', path: '/faculty/students', icon: <PeopleIcon /> },
     { text: 'Schedule', path: '/faculty/schedule', icon: <ScheduleIcon /> },
     { text: 'Question Pool', path: '/faculty/question-pool', icon: <QuizIcon /> },
+    { text: 'Reports', path: '/faculty/reports', icon: <AssignmentIcon /> },
   ];
 
   const handleLogout = () => {
