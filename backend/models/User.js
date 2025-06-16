@@ -2,29 +2,45 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-    name: {type: String, required: true},
-    user_id: {type: String, required: true, unique: true},
-    roll_number: {type: String, required: true, unique: true},
-    password: {type: String, required: true},
-    role:{
+    name: { type: String, required: true },
+    user_id: { type: String, required: true, unique: true },
+    roll_number: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: {
         type: String,
         enum: ['admin', 'faculty', 'student'],
-        default: 'student',
-         batch: { 
+        default: 'student'
+    },
+    batch: {
         type: String,
-        enum: ['N', 'P', 'Q'] 
-        },
-        semester: { type: Number, min: 1, max: 8 }
+        enum: ['N', 'P', 'Q'],
+        // Only required for students, but do NOT set required here to avoid issues for faculty/admin
+    },
+    semester: {
+        type: Number,
+        min: 1,
+        max: 8,
+        // Only required for students, but do NOT set required here to avoid issues for faculty/admin
     },
     session_token: { type: String, default: null }
  }); 
 
 
-//
+// Ensure password is always hashed (even on update)
 userSchema.pre('save', async function(next) {
     if (this.isModified('password')) {
         const salt = await bcrypt.genSalt(10);
         this.password = await bcrypt.hash(this.password, salt);
+    }
+    next();
+});
+
+userSchema.pre('findOneAndUpdate', async function(next) {
+    const update = this.getUpdate();
+    if (update && update.password) {
+        const salt = await bcrypt.genSalt(10);
+        update.password = await bcrypt.hash(update.password, salt);
+        this.setUpdate(update);
     }
     next();
 });
@@ -41,4 +57,4 @@ module.exports = mongoose.model('User', userSchema);
 // The code uses bcryptjs for password hashing and comparison, ensuring secure storage of user passwords.
 // The user_id field is unique, ensuring that no two users can have the same user_id.
 // The schema is designed to be flexible, allowing for easy extension in the future if additional fields or functionality are needed.
-// The use of async/await in the pre-save middleware and comparePassword method allows for cleaner and more readable asynchronous code.     
+// The use of async/await in the pre-save middleware and comparePassword method allows for cleaner and more readable asynchronous code.

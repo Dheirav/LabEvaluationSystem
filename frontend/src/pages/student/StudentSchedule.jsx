@@ -4,7 +4,7 @@ import {
 } from '@mui/material';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import CloseIcon from '@mui/icons-material/Close';
-import FacultySidebar from '../../components/FacultySidebar';
+import StudentSidebar from '../../components/StudentSidebar';
 import Header from '../../components/Header';
 import { AuthContext } from '../../context/AuthContext';
 import axios from 'axios';
@@ -20,12 +20,7 @@ function getDaysInMonth(year, month) {
   return days;
 }
 
-const timeSlots = [
-  '08:00', '09:00', '10:00', '11:00', '12:00',
-  '13:00', '14:00', '15:00', '16:00', '17:00'
-];
-
-const FacultySchedule = () => {
+const StudentSchedule = () => {
   const { user } = useContext(AuthContext);
   const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +37,7 @@ const FacultySchedule = () => {
       setError('');
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('/api/faculty/schedule', {
+        const res = await axios.get('/api/student/schedule', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setSchedule(res.data || []);
@@ -84,24 +79,10 @@ const FacultySchedule = () => {
     setSelectedDay(null);
   };
 
-  // Get events for selected day, grouped by time
-  const eventsForSelectedDay = (() => {
-    if (!selectedDay) return [];
-    const key = selectedDay.toISOString().slice(0, 10);
-    const events = eventsByDay[key] || [];
-    // Group by time
-    const byTime = {};
-    events.forEach(ev => {
-      if (!byTime[ev.time]) byTime[ev.time] = [];
-      byTime[ev.time].push(ev);
-    });
-    return Object.entries(byTime).sort();
-  })();
-
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #282f2f, #becdcd)' }}>
-      <Header title="Faculty - Schedule" />
-      <FacultySidebar facultyName={user?.name} />
+      <Header title="Student - Schedule" />
+      <StudentSidebar studentName={user?.name} />
       <Box component="main" sx={{ flexGrow: 1, p: 3, overflow: 'auto' }}>
         <Typography variant="h4" gutterBottom color="white" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <CalendarMonthIcon sx={{ mr: 1 }} /> My Schedule
@@ -269,4 +250,4 @@ const FacultySchedule = () => {
   );
 };
 
-export default FacultySchedule;
+export default StudentSchedule;
