@@ -13,7 +13,6 @@ const CourseManagement = () => {
   const [error, setError] = useState('');
   const [newCourseName, setNewCourseName] = useState('');
   const [newCourseCode, setNewCourseCode] = useState('');
-  const [newFacultyId, setNewFacultyId] = useState('');
 
   const fetchCourses = async () => {
     setLoading(true);
@@ -24,7 +23,7 @@ const CourseManagement = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCourses(res.data || []);
-    } catch {
+    } catch (error) {
       setCourses([]);
       setError('Failed to fetch courses');
     }
@@ -36,8 +35,8 @@ const CourseManagement = () => {
   }, []);
 
   const handleCreateCourse = async () => {
-    if (!newCourseName || !newCourseCode || !newFacultyId) {
-      setError('Please fill in all required fields: Course Name, Course Code, and Faculty ID.');
+    if (!newCourseName || !newCourseCode) {
+      setError('Please fill in all required fields: Course Name and Course Code.');
       return;
     }
 
@@ -46,15 +45,12 @@ const CourseManagement = () => {
       await axios.post('/api/admin/courses', {
         name: newCourseName,
         code: newCourseCode,
-        faculty: newFacultyId
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       setNewCourseName('');
       setNewCourseCode('');
-      setNewFacultyId('');
-      // Refresh courses
       fetchCourses();
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to create course');
@@ -67,8 +63,6 @@ const CourseManagement = () => {
       await axios.delete(`/api/admin/courses/${courseId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
-      // Refresh courses
       fetchCourses();
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to delete course');
@@ -95,17 +89,8 @@ const CourseManagement = () => {
             fullWidth
             value={newCourseCode}
             onChange={e => setNewCourseCode(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Faculty ID"
-            fullWidth
-            value={newFacultyId}
-            onChange={e => setNewFacultyId(e.target.value)}
-            sx={{ mb: 2 }}
           />
           <Button variant="contained" onClick={handleCreateCourse}>Create Course</Button>
-
           <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>Existing Courses</Typography>
           {loading ? (
             <CircularProgress />
@@ -117,16 +102,14 @@ const CourseManagement = () => {
                 <TableRow>
                   <TableCell>Name</TableCell>
                   <TableCell>Code</TableCell>
-                  <TableCell>Faculty ID</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {courses.map(course => (
+                {courses.map((course) => (
                   <TableRow key={course._id}>
                     <TableCell>{course.name}</TableCell>
                     <TableCell>{course.code}</TableCell>
-                    <TableCell>{course.faculty}</TableCell>
                     <TableCell>
                       <IconButton aria-label="edit">
                         <EditIcon />
