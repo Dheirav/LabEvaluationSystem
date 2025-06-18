@@ -16,16 +16,15 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import PeopleIcon from '@mui/icons-material/People';
 import ScheduleIcon from '@mui/icons-material/Schedule';
-import QuizIcon from '@mui/icons-material/Quiz';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import QuizIcon from '@mui/icons-material/Quiz';
 
 const drawerWidth = 220;
 
-export default function FacultySidebar({ facultyName }) {
+export default function StudentSidebar({ studentName }) {
   const [open, setOpen] = useState(true);
   const location = useLocation();
   const theme = useTheme();
@@ -36,12 +35,10 @@ export default function FacultySidebar({ facultyName }) {
   };
 
   const items = [
-    { text: 'Dashboard', path: '/faculty', icon: <DashboardIcon /> },
-    { text: 'Evaluations', path: '/faculty/evaluations', icon: <AssignmentIcon /> },
-    { text: 'Students', path: '/faculty/students', icon: <PeopleIcon /> },
-    { text: 'Schedule', path: '/faculty/schedule', icon: <ScheduleIcon /> },
-    { text: 'Question Pool', path: '/faculty/question-pool', icon: <QuizIcon /> },
-    { text: 'Reports', path: '/faculty/reports', icon: <AssignmentIcon /> },
+    { text: 'Dashboard', path: '/student', icon: <DashboardIcon /> },
+    { text: 'Evaluations', path: '/student/evaluations', icon: <AssignmentIcon /> },
+    { text: 'Tests', path: '/student/tests', icon: <QuizIcon /> }, // Added Tests
+    { text: 'Schedule', path: '/student/schedule', icon: <ScheduleIcon /> },
   ];
 
   const handleLogout = () => {
@@ -49,7 +46,7 @@ export default function FacultySidebar({ facultyName }) {
     navigate('/login');
   };
 
-  // Optionally decode faculty info from token
+  // Optionally decode student info from token
   let user = null;
   const token = localStorage.getItem('token');
   if (token) {
@@ -114,12 +111,12 @@ export default function FacultySidebar({ facultyName }) {
             transition: 'all 0.2s'
           }}
         >
-          {facultyName ? facultyName[0] : user?.name?.[0] || 'F'}
+          {studentName ? studentName[0] : user?.name?.[0] || 'S'}
         </Avatar>
         {open && (
           <>
             <Typography variant="subtitle1" color="white" noWrap>
-              {facultyName || user?.name || 'Faculty'}
+              {studentName || user?.name || 'Student'}
             </Typography>
             <Typography variant="body2" color="gray" noWrap>
               {user?.user_id}

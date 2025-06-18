@@ -13,7 +13,6 @@ const router = express.Router();
 
 const allowedBatches = ['N', 'P', 'Q'];
 
-// Register individual user
 router.post('/register/individual', protect, authorize('admin'), async (req, res) => {
     try {
         const { name, user_id, password, role, roll_number, batch, semester } = req.body;
@@ -40,14 +39,13 @@ router.post('/register/individual', protect, authorize('admin'), async (req, res
             name,
             user_id,
             roll_number,
-            password: password,
+            password, 
             role
         };
         
         // If student, add batch and semester
         if (role === 'student') {
             if (batch) {
-                // Validate batch is one of the allowed values
                 if (!allowedBatches.includes(batch)) {
                     return res.status(400).json({ message: 'Invalid batch' });
                 }

@@ -1,5 +1,8 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { Box, Typography, Paper, CircularProgress, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, Button } from '@mui/material';
+import {
+  Box, Typography, Paper, CircularProgress, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, Button,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, FormControl, InputLabel
+} from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FacultySidebar from '../../components/FacultySidebar';
 import Header from '../../components/Header';
@@ -11,6 +14,9 @@ const FacultyQuestionPool = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [addQuestionDialog, setAddQuestionDialog] = useState(false);
+  const [selectedTest, setSelectedTest] = useState('');
+  const [newQuestionText, setNewQuestionText] = useState('');
 
   useEffect(() => {
     const fetchQuestionPool = async () => {
@@ -30,6 +36,50 @@ const FacultyQuestionPool = () => {
     };
     fetchQuestionPool();
   }, []);
+
+  const handleAddQuestionClick = (testId) => {
+    setSelectedTest(testId);
+    setNewQuestionText('');
+    setAddQuestionDialog(true);
+  };
+
+  const handleAddQuestionSubmit = async () => {
+    if (!newQuestionText || !selectedTest) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('/api/faculty/questions', {
+        text: newQuestionText,
+        test: selectedTest
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setAddQuestionDialog(false);
+      setSelectedTest('');
+      setNewQuestionText('');
+      // Refresh question pool
+      fetchQuestionPool();
+    } catch (error) {
+      setError('Failed to add question');
+    }
+  };
+
+  const fetchQuestionPool = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('/api/faculty/question-pool', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCourses(res.data || []);
+    } catch {
+      setCourses([]);
+      setError('Failed to fetch question pool');
+    }
+    setLoading(false);
+  };
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #282f2f, #becdcd)' }}>
@@ -72,7 +122,7 @@ const FacultyQuestionPool = () => {
                               </ListItem>
                             )}
                           </List>
-                          <Button variant="outlined" sx={{ mt: 1 }}>Add Question</Button>
+                          <Button variant="outlined" sx={{ mt: 1 }} onClick={() => handleAddQuestionClick(test._id)}>Add Question</Button>
                         </AccordionDetails>
                       </Accordion>
                     ))
@@ -85,6 +135,41 @@ const FacultyQuestionPool = () => {
           )}
         </Paper>
       </Box>
+
+      <Dialog open={addQuestionDialog} onClose={() => setAddQuestionDialog(false)}>
+        <DialogTitle>Add New Question</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Question Text"
+            fullWidth
+            multiline
+            rows={4}
+            value={newQuestionText}
+            onChange={e => setNewQuestionText(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel id="select-test-label">Select Test</InputLabel>
+            <Select
+              labelId="select-test-label"
+              id="select-test"
+              value={selectedTest}
+              label="Select Test"
+              onChange={e => setSelectedTest(e.target.value)}
+            >
+              {courses.map(course => (
+                course.tests.map(test => (
+                  <MenuItem key={test._id} value={test._id}>{test.name}</MenuItem>
+                ))
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddQuestionDialog(false)}>Cancel</Button>
+          <Button onClick={handleAddQuestionSubmit} variant="contained">Add</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
