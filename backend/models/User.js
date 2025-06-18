@@ -14,19 +14,11 @@ const userSchema = new mongoose.Schema({
     batch: {
         type: String,
         enum: ['N', 'P', 'Q'],
-        // Only required for students, but do NOT set required here to avoid issues for faculty/admin
-    },
-    semester: {
-        type: Number,
-        min: 1,
-        max: 8,
-        // Only required for students, but do NOT set required here to avoid issues for faculty/admin
-    },
+    semester: { type: Number, min: 1, max: 8 }, 
     session_token: { type: String, default: null }
  }); 
 
-
-// Ensure password is always hashed (even on update)
+  
 userSchema.pre('save', async function(next) {
     if (this.isModified('password')) {
         const salt = await bcrypt.genSalt(10);

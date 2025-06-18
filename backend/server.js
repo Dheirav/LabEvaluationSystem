@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth');
 const logsRoutes = require('./routes/logs');
 const adminRoutes = require('./routes/admin'); // Import admin routes
+const facultyRoutes = require('./routes/faculty');
 
 (async () => {
   // Load environment variables
@@ -26,10 +27,9 @@ const adminRoutes = require('./routes/admin'); // Import admin routes
 
   // Routes
   app.use('/api/auth', authRoutes);
-  app.use('/api/logs', logsRoutes);
-  app.use('/api/admin', adminRoutes); // Use admin routes
-  
-  app.use('/api/faculty', require('./routes/faculty'));
+  app.use('/api/logs', logsRoutes)
+  app.use('/api/admin', adminRoutes); 
+  app.use('/api/faculty', facultyRoutes);
 
   // Error handling middleware
   app.use((err, req, res, next) => {
