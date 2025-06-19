@@ -6,14 +6,20 @@ const { protect, authorize } = require('../middleware/auth');
 const Course = require('../models/Course');
 const Evaluation = require('../models/Evaluation');
 const User = require('../models/User');
+const FacultyCourse = require('../models/FacultyCourse');
 const Schedule = require('../models/Schedule');
 const QuestionPool = require('../models/QuestionPool');
 
 // Get courses assigned to the faculty
 router.get('/courses', protect, authorize('faculty'), async (req, res) => {
-  // Example: find courses where faculty field matches logged-in user
-  const courses = await Course.find({ faculty: req.user.id });
-  res.json(courses);
+  try {
+    const facultyCourses = await FacultyCourse.find({ facultyId: req.user.id }).populate('courseId', 'name code');
+    const courses = facultyCourses.map(fc => fc.courseId);
+    res.json(courses);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // Get evaluations/tests to grade
