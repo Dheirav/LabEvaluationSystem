@@ -18,7 +18,7 @@ const ConfirmDialog = ({
   cancelText = 'Cancel',
   title = 'Confirm Action'
 }) => {
-  const handleKeyPress = (event) => {
+  const handleKeyDown = (event) => {
     if (event.key === 'Enter') {
       onConfirm();
     }
@@ -28,7 +28,7 @@ const ConfirmDialog = ({
     <Dialog
       open={open}
       onClose={onCancel}
-      onKeyPress={handleKeyPress}
+      onKeyDown={handleKeyDown}
       TransitionComponent={Fade}
       PaperProps={{
         sx: {

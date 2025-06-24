@@ -13,7 +13,8 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import ConfirmDialog from '../../components/ConfirmDialog ';
+import LockResetIcon from '@mui/icons-material/LockReset';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const UserManagement = () => {
   // Individual registration state
@@ -41,6 +42,12 @@ const UserManagement = () => {
   const [semesters] = useState([1, 2, 3, 4, 5, 6, 7, 8]);
   const [newBatchDialog, setNewBatchDialog] = useState(false);
   const [newBatchName, setNewBatchName] = useState(''); 
+  const [indivConfirmOpen, setIndivConfirmOpen] = useState(false);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [pendingIndiv, setPendingIndiv] = useState(null);
+  const [pendingBulk, setPendingBulk] = useState(null);
+  const [clearSessionDialogOpen, setClearSessionDialogOpen] = useState(false);
+  const [userToClearSession, setUserToClearSession] = useState(null);
 
   // Fetch users on component mount
   useEffect(() => {
@@ -124,65 +131,98 @@ const handleDeleteConfirm = async () => {
   }
 };
 
-  // Submit individual registration
-  const handleIndivSubmit = async (e) => {
-    e.preventDefault();
-    setIndivLoading(true);
-    setIndivMsg({ type: '', text: '' });
-    try {
-      await axios.post('/api/auth/register/individual', indiv);
-      setIndivMsg({ type: 'success', text: 'User registered!' });
-      setIndiv({ name: '',roll_number: '', user_id: '', password: '', role: 'student' });
-      await fetchUsers(); 
-    } catch (err) {
-      setIndivMsg({ type: 'error', text: err.response?.data?.message || err.message });
-    } finally {
-      setIndivLoading(false);
-    }
-  };
+// Modified individual registration submit
+const handleIndivSubmit = (e) => {
+  e.preventDefault();
+  setPendingIndiv({ ...indiv });
+  setIndivConfirmOpen(true);
+};
 
-  // Handle bulk file change
-  const handleBulkFile = (e) => {
-    setBulkFile(e.target.files[0]);
-  };
+const handleIndivConfirm = async () => {
+  setIndivConfirmOpen(false);
+  setIndivLoading(true);
+  setIndivMsg({ type: '', text: '' });
+  try {
+    await axios.post('/api/auth/register/individual', pendingIndiv);
+    setIndivMsg({ type: 'success', text: 'User registered!' });
+    setIndiv({ name: '',roll_number: '', user_id: '', password: '', role: 'student', batch: 'N', semester: '1' });
+    await fetchUsers(); 
+  } catch (err) {
+    setIndivMsg({ type: 'error', text: err.response?.data?.message || err.message });
+  } finally {
+    setIndivLoading(false);
+    setPendingIndiv(null);
+  }
+};
 
-  // Submit bulk registration
-  const handleBulkSubmit = async (e) => {
-    e.preventDefault();
-    setBulkMsg({ type: '', text: '' });
-    if (!bulkFile) {
-      setBulkMsg({ type: 'error', text: 'No file selected' });
-      return;
-    }
-    setBulkLoading(true);
-    const formData = new FormData();
-    formData.append('file', bulkFile);
-    try {
-      const res = await axios.post('/api/auth/register/bulk', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setBulkMsg({
-        type: res.data.errors.length ? 'warning' : 'success',
-        text: `Bulk registration complete: ${res.data.created.length} users created, ${res.data.errors.length} errors`,
-      });
-      setBulkFile(null);
-      await fetchUsers(); 
-    } catch (err) {
-      setBulkMsg({ type: 'error', text: err.response?.data?.message || err.message });
-    } finally {
-      setBulkLoading(false);
-    }
-  };
+// Handle bulk file change
+const handleBulkFile = (e) => {
+  setBulkFile(e.target.files[0]);
+};
 
-  // Modify your handleIndivChange
-  const handleIndivChange = (e) => {
-    const { name, value } = e.target;
-    setIndiv({
-      ...indiv,
-      [name]: value
+// Modified bulk registration submit
+const handleBulkSubmit = (e) => {
+  e.preventDefault();
+  if (!bulkFile) {
+    setBulkMsg({ type: 'error', text: 'No file selected' });
+    return;
+  }
+  setPendingBulk(bulkFile);
+  setBulkConfirmOpen(true);
+};
+
+const handleBulkConfirm = async () => {
+  setBulkConfirmOpen(false);
+  setBulkLoading(true);
+  setBulkMsg({ type: '', text: '' });
+  const formData = new FormData();
+  formData.append('file', pendingBulk);
+  try {
+    const res = await axios.post('/api/auth/register/bulk', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
-  };
+    setBulkMsg({
+      type: res.data.errors.length ? 'warning' : 'success',
+      text: `Bulk registration complete: ${res.data.created.length} users created, ${res.data.errors.length} errors`,
+    });
+    setBulkFile(null);
+    await fetchUsers(); 
+  } catch (err) {
+    setBulkMsg({ type: 'error', text: err.response?.data?.message || err.message });
+  } finally {
+    setBulkLoading(false);
+    setPendingBulk(null);
+  }
+};
 
+// Modify your handleIndivChange
+const handleIndivChange = (e) => {
+  const { name, value } = e.target;
+  setIndiv({
+    ...indiv,
+    [name]: value
+  });
+};
+
+// Add missing clear session handlers
+const handleClearSession = (user) => {
+  setUserToClearSession(user);
+  setClearSessionDialogOpen(true);
+};
+
+const handleClearSessionConfirm = async () => {
+  if (!userToClearSession) return;
+  try {
+    await axios.post(`/api/admin/clear-session/${userToClearSession._id}`);
+    setClearSessionDialogOpen(false);
+    setUserToClearSession(null);
+    fetchUsers();
+  } catch (error) {
+    alert('Error clearing session token');
+    setClearSessionDialogOpen(false);
+    setUserToClearSession(null);
+  }
+};
 
   return (
     <Box 
@@ -422,6 +462,9 @@ const handleDeleteConfirm = async () => {
                                 </IconButton>
                                 <IconButton onClick={() => handleDeleteUser(user._id)}>
                                   <DeleteIcon />
+                                </IconButton>
+                                <IconButton onClick={() => handleClearSession(user)} title="Clear Session">
+                                  <LockResetIcon />
                                 </IconButton>
                               </TableCell>
                             </TableRow>
@@ -822,6 +865,33 @@ const handleDeleteConfirm = async () => {
             confirmText="Delete"
             cancelText="Cancel"
           />
+          <ConfirmDialog
+  open={indivConfirmOpen}
+  title="Confirm Registration"
+  message="Are you sure you want to register this user?"
+  onConfirm={handleIndivConfirm}
+  onCancel={() => setIndivConfirmOpen(false)}
+  confirmText="Register"
+  cancelText="Cancel"
+/>
+<ConfirmDialog
+  open={bulkConfirmOpen}
+  title="Confirm Bulk Registration"
+  message={`Are you sure you want to upload and register users from this file?${bulkFile ? `\nFile: ${bulkFile.name}` : ''}`}
+  onConfirm={handleBulkConfirm}
+  onCancel={() => setBulkConfirmOpen(false)}
+  confirmText="Upload"
+  cancelText="Cancel"
+/>
+<ConfirmDialog
+  open={clearSessionDialogOpen}
+  title="Clear User Session"
+  message={userToClearSession ? `Are you sure you want to clear the session token for user ${userToClearSession.name} (${userToClearSession.user_id})?` : ''}
+  onConfirm={handleClearSessionConfirm}
+  onCancel={() => { setClearSessionDialogOpen(false); setUserToClearSession(null); }}
+  confirmText="Clear Session"
+  cancelText="Cancel"
+/>
         
         </Box>
       </Box>

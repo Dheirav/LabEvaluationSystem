@@ -1,0 +1,19 @@
+[
+    {"name": "4", "user_id": "4", "roll_number": "S1004", "password": "4", "role": "student", "batch": "N", "semester": 2},
+    {"name": "5", "user_id": "5", "roll_number": "S1005", "password": "5", "role": "student", "batch": "P", "semester": 3},
+    {"name": "6", "user_id": "6", "roll_number": "S1006", "password": "6", "role": "student", "batch": "P", "semester": 3},
+    {"name": "7", "user_id": "7", "roll_number": "S1007", "password": "7", "role": "student", "batch": "P", "semester": 4},
+    {"name": "8", "user_id": "8", "roll_number": "S1008", "password": "8", "role": "student", "batch": "P", "semester": 4},
+    {"name": "9", "user_id": "9", "roll_number": "S1009", "password": "9", "role": "student", "batch": "Q", "semester": 5},
+    {"name": "10", "user_id": "10", "roll_number": "S1010", "password": "10", "role": "student", "batch": "Q", "semester": 5},
+    {"name": "11", "user_id": "11", "roll_number": "S1011", "password": "11", "role": "student", "batch": "Q", "semester": 6},
+    {"name": "12", "user_id": "12", "roll_number": "S1012", "password": "12", "role": "student", "batch": "Q", "semester": 6},
+    {"name": "13", "user_id": "13", "roll_number": "S1013", "password": "13", "role": "student", "batch": "N", "semester": 7},
+    {"name": "14", "user_id": "14", "roll_number": "S1014", "password": "14", "role": "student", "batch": "N", "semester": 7},
+    {"name": "15", "user_id": "15", "roll_number": "S1015", "password": "15", "role": "student", "batch": "P", "semester": 8},
+    {"name": "16", "user_id": "16", "roll_number": "S1016", "password": "16", "role": "student", "batch": "P", "semester": 8},
+    {"name": "17", "user_id": "17", "roll_number": "F2001", "password": "17", "role": "faculty"},
+    {"name": "18", "user_id": "18", "roll_number": "F2002", "password": "18", "role": "faculty"},
+    {"name": "19", "user_id": "19", "roll_number": "A3001", "password": "19", "role": "admin"},
+    {"name": "20", "user_id": "20", "roll_number": "A3002", "password": "20", "role": "admin"}
+]

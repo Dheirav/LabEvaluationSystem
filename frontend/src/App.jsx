@@ -1,19 +1,21 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
+import AdminDashboard from './pages/admin/AdminDashboard';
 import FacultyDashboard from './pages/faculty/FacultyDashboard';
 import StudentDashboard from './pages/student/StudentDashboard';
-import AdminServerLogs from './pages/AdminServerLogs';
-import UserManagement from './pages/UserManagement';
+import AdminServerLogs from './pages/admin/AdminServerLogs';
+import UserManagement from './pages/admin/UserManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import FacultyEvaluations from './pages/faculty/FacultyEvaluations';
-import CourseManagement from './pages/CourseManagement';
+import CourseManagement from './pages/admin/CourseManagement';
 import FacultyStudents from './pages/faculty/FacultyStudents';
 import FacultySchedule from './pages/faculty/FacultySchedule';
 import FacultyQuestionPool from './pages/faculty/FacultyQuestionPool';
 import FacultyReports from './pages/faculty/FacultyReports';
-import FacultyCourseAssignment from './pages/FacultyCourseAssignment';
+import FacultyCourseAssignment from './pages/admin/FacultyCourseAssignment';
+import FacultyTestCreation from './pages/faculty/FacultyTestCreation';
+import FacultyTestList from './pages/faculty/FacultyTestList';
 
 function App() {
   return (
@@ -92,6 +94,17 @@ function App() {
           <Route path="/admin/faculty-course-assignment" element={
             <ProtectedRoute allowedRoles={['admin']}>
               <FacultyCourseAssignment />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/faculty/test-creation" element={
+            <ProtectedRoute allowedRoles={['faculty']}>
+              <FacultyTestCreation />
+            </ProtectedRoute>
+          } />
+          <Route path="/faculty/tests" element={
+            <ProtectedRoute allowedRoles={['faculty']}>
+              <FacultyTestList />
             </ProtectedRoute>
           } />
 

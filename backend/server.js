@@ -4,7 +4,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth');
 const logsRoutes = require('./routes/logs');
-const adminRoutes = require('./routes/admin'); // Import admin routes
+const adminRoutes = require('./routes/admin'); 
 const facultyRoutes = require('./routes/faculty');
 
 (async () => {

@@ -11,11 +11,20 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      // Optionally, fetch user info from /me endpoint
-      // axios.get('/api/auth/me')
-      //   .then(res => setUser(res.data.user))
-      //   .catch(() => logout());
-      // Instead, you may want to decode the token or just set loading to false
+      // Try to decode user from token
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
+        setUser(JSON.parse(jsonPayload));
+      } catch {
+        setUser(null);
+      }
       setLoading(false);
     } else {
       setLoading(false);
@@ -43,8 +52,31 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Clear session token for students
+  const clearStudentSession = () => {
+    if (user && user.role === 'student') {
+      localStorage.removeItem('token');
+      delete axios.defaults.headers.common['Authorization'];
+      setUser(null);
+    }
+  };
+
+  // Clear session token on tab close for students
+  useEffect(() => {
+    const handleTabClose = () => {
+      if (user && user.role === 'student') {
+        localStorage.removeItem('token');
+        delete axios.defaults.headers.common['Authorization'];
+      }
+    };
+    window.addEventListener('beforeunload', handleTabClose);
+    return () => {
+      window.removeEventListener('beforeunload', handleTabClose);
+    };
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, clearStudentSession }}>
       {children}
     </AuthContext.Provider>
   );
