@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { Box, Typography, Paper, CircularProgress, Table, TableHead, TableRow, TableCell, TableBody, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
 import FacultySidebar from '../../components/FacultySidebar';
-import Header from '../../components/Header';
 import { AuthContext } from '../../context/AuthContext';
 import axios from 'axios';
 
@@ -60,12 +59,12 @@ const FacultyEvaluations = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #282f2f, #becdcd)' }}>
-      <Header title="Faculty - Evaluations" />
+    <Box sx={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #282f2f, #becdcd)', overflow: 'auto' }}>
+      {/* <Header title="Faculty - Evaluations" /> */}
       <FacultySidebar facultyName={user?.name} />
-      <Box component="main" sx={{ flexGrow: 1, p: 3, overflow: 'auto' }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, overflow: 'auto', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
         <Typography variant="h4" gutterBottom color="white">My Evaluations</Typography>
-        <Paper sx={{ p: 3, borderRadius: 3, mt: 2 }}>
+        <Paper sx={{ p: 3, borderRadius: 3, mt: 2, width: '100%', maxWidth: 1000, maxHeight: '90vh', overflow: 'auto' }}>
           {loading ? (
             <CircularProgress />
           ) : error ? (

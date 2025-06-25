@@ -375,7 +375,7 @@ router.post('/questions/bulk-import', protect, authorize('faculty'), async (req,
 // Create a new test/exercise
 router.post('/tests', protect, authorize('faculty'), async (req, res) => {
   try {
-    const { name, course, questions, date, time, metadata } = req.body;
+    const { name, course, questions, date, time, metadata, envSettings } = req.body;
     if (!name || !course || !Array.isArray(questions) || questions.length === 0) {
       return res.status(400).json({ message: 'Name, course, and at least one question are required' });
     }
@@ -386,6 +386,7 @@ router.post('/tests', protect, authorize('faculty'), async (req, res) => {
       date,
       time,
       metadata: metadata || {},
+      envSettings: envSettings || {},
       createdBy: req.user._id
     });
     await test.save();
@@ -395,13 +396,21 @@ router.post('/tests', protect, authorize('faculty'), async (req, res) => {
   }
 });
 
-// List all tests for a faculty (optionally filter by course)
+// List all tests for courses assigned to this faculty
 router.get('/tests', protect, authorize('faculty'), async (req, res) => {
   try {
     const { course } = req.query;
-    const filter = { createdBy: req.user._id };
-    if (course) filter.course = course;
-    const tests = await Test.find(filter).populate('course').populate('questions');
+    // Find all courses assigned to this faculty
+    const courseFilter = { facultyId: req.user.id };
+    if (course) courseFilter.courseId = course;
+    const assignments = await FacultyCourse.find(courseFilter);
+    const courseIds = assignments.map(a => a.courseId);
+    if (!courseIds.length) return res.json([]);
+    // Find all tests for these courses
+    const testFilter = { course: { $in: courseIds } };
+    const tests = await Test.find(testFilter)
+      .populate('course', 'name code')
+      .populate('questions');
     res.json(tests);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching tests' });
@@ -422,10 +431,13 @@ router.get('/tests/:id', protect, authorize('faculty'), async (req, res) => {
 // Update a test
 router.put('/tests/:id', protect, authorize('faculty'), async (req, res) => {
   try {
-    const { name, questions, date, time, metadata } = req.body;
+    const { name, questions, date, time, type, batches, metadata, envSettings } = req.body;
+    const update = { name, questions, date, time, type, batches, metadata, envSettings, updatedAt: Date.now() };
+    // Remove undefined fields
+    Object.keys(update).forEach(key => update[key] === undefined && delete update[key]);
     const test = await Test.findByIdAndUpdate(
       req.params.id,
-      { name, questions, date, time, metadata, updatedAt: Date.now() },
+      update,
       { new: true }
     );
     if (!test) return res.status(404).json({ message: 'Test not found' });
@@ -476,21 +488,45 @@ router.post('/schedule', protect, authorize('faculty'), async (req, res) => {
 router.get('/course-batches', protect, authorize('faculty'), async (req, res) => {
   try {
     const { course } = req.query;
-    if (!course) return res.status(400).json({ message: 'Course ID required' });
+  
+    if (!course) {
+    
+      return res.status(400).json({ message: 'Course ID required' });
+    }
     const assignments = await FacultyCourse.find({ facultyId: req.user.id, courseId: course });
+    let effectiveAssignments = assignments;
+    if (assignments.length === 0) {
+      const allAssignments = await FacultyCourse.find({ facultyId: req.user.id });
+      const filtered = allAssignments.filter(a => String(a.courseId) === String(course));
+      effectiveAssignments = filtered;
+    }
     // Unique batches and semesters
     const batchSet = new Set();
     const semesterSet = new Set();
-    assignments.forEach(a => {
+    effectiveAssignments.forEach(a => {
       if (a.batch) batchSet.add(a.batch);
       if (a.semester) semesterSet.add(a.semester);
     });
-    res.json({
+      res.json({
       batches: Array.from(batchSet),
       semesters: Array.from(semesterSet)
     });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching batches' });
+  }
+});
+
+// DELETE /api/faculty/schedule/:id
+
+router.delete('/schedule/:id', async (req, res) => {
+  try {
+    const result = await Schedule.findByIdAndDelete(req.params.id);
+    if (!result) {
+      return res.status(404).json({ message: 'Schedule entry not found' });
+    }
+    res.json({ message: 'Schedule entry deleted' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error deleting schedule entry' });
   }
 });
 

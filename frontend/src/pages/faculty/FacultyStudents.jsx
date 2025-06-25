@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { Box, Typography, Paper, CircularProgress, Table, TableHead, TableRow, TableCell, TableBody, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import FacultySidebar from '../../components/FacultySidebar';
-import Header from '../../components/Header';
 import { AuthContext } from '../../context/AuthContext';
 import axios from 'axios';
 import axiosInstance from '../../api/axios';
@@ -36,7 +35,7 @@ const FacultyStudents = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #282f2f, #becdcd)' }}>
-      <Header title="Faculty - Students" />
+      {/* <Header title="Faculty - Students" /> */}
       <FacultySidebar facultyName={user?.name} />
       <Box component="main" sx={{ flexGrow: 1, p: 3, overflow: 'auto' }}>
         <Typography variant="h4" gutterBottom color="white">My Students</Typography>

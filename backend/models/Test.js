@@ -7,7 +7,13 @@ const testSchema = new mongoose.Schema({
   date: { type: Date, required: true },      // Date of the test
   time: { type: String, required: true },    // Time of the test (e.g., "10:00 AM - 12:00 PM")
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  metadata: { type: Object, default: {} }
+  metadata: { type: Object, default: {} },
+  envSettings: {
+    allowTabSwitch: { type: Boolean, default: false },
+    allowExternalCopyPaste: { type: Boolean, default: false },
+    allowInternalCopyPaste: { type: Boolean, default: true },
+    enforceFullscreen: { type: Boolean, default: false }
+  }
 });
 
 module.exports = mongoose.model('Test', testSchema);

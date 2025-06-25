@@ -13,7 +13,6 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import FacultySidebar from '../../components/FacultySidebar';
-import Header from '../../components/Header';
 import { AuthContext } from '../../context/AuthContext';
 import axios from 'axios';
 
@@ -322,7 +321,7 @@ const FacultyQuestionPool = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #282f2f, #becdcd)' }}>
-      <Header title="Faculty - Question Pool" />
+      {/* <Header title="Faculty - Question Pool" /> */}
       <FacultySidebar facultyName={user?.name} />
       <Box component="main" sx={{ flexGrow: 1, p: 3, overflow: 'auto' }}>
         <Typography variant="h4" gutterBottom color="white">Question Pool</Typography>
