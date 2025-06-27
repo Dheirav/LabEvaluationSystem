@@ -14,11 +14,26 @@ const userSchema = new mongoose.Schema({
     batch: {
         type: String,
         enum: ['N', 'P', 'Q'],
-    semester: { type: Number, min: 1, max: 8 }, 
-    session_token: { type: String, default: null }
+        // Only required for students, but do NOT set required here to avoid issues for faculty/admin
+    },
+    semester: {
+        type: Number,
+        min: 1,
+        max: 8,
+        // Only required for students, but do NOT set required here to avoid issues for faculty/admin
+    },
+    session_token: { type: String, default: null },
+    assignedCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
+    assignedCourseBatches: [
+        {
+            course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
+            batches: [{ type: String, enum: ['N', 'P', 'Q'] }]
+        }
+    ]
  }); 
 
-  
+
+// Ensure password is always hashed (even on update)
 userSchema.pre('save', async function(next) {
     if (this.isModified('password')) {
         const salt = await bcrypt.genSalt(10);
@@ -50,3 +65,4 @@ module.exports = mongoose.model('User', userSchema);
 // The user_id field is unique, ensuring that no two users can have the same user_id.
 // The schema is designed to be flexible, allowing for easy extension in the future if additional fields or functionality are needed.
 // The use of async/await in the pre-save middleware and comparePassword method allows for cleaner and more readable asynchronous code.
+// Added assignedCourseBatches field to support per-course batch assignment for faculty.

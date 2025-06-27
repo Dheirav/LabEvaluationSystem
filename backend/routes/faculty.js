@@ -9,17 +9,50 @@ const User = require('../models/User');
 const FacultyCourse = require('../models/FacultyCourse');
 const Schedule = require('../models/Schedule');
 const QuestionPool = require('../models/QuestionPool');
+const LabManual = require('../models/LabManual');
+const multer = require('multer');
+const path = require('path');
+
+// Multer storage for lab manuals
+const manualStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, '..', 'uploads', 'labmanuals'));
+  },
+  filename: function (req, file, cb) {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, unique + '-' + file.originalname);
+  }
+});
+const manualUpload = multer({ storage: manualStorage });
+
+// Hardcoded course-semester mapping
+const courseSemesterMap = {
+  'Programming in C': 1,
+  'Computational Thinking': 1,
+  'Object Oriented Programming': 2,
+  'Data Structures': 3,
+  'Digital System Design': 3,
+  'Java Programming': 3,
+  'Database Management Systems': 4,
+  'Computer Architecture': 4,
+  'Full Stack Technologies': 4,
+  'Operating Systems': 5,
+  'Networks and Data Communication': 5,
+  'Cryptography and System Security': 6,
+  'Compiler Design': 6,
+  'Machine Learning': 6,
+  'Creative and Innovative Project': 6,
+  'Project Work / Internship': 8
+};
 
 // Get courses assigned to the faculty
 router.get('/courses', protect, authorize('faculty'), async (req, res) => {
-  try {
-    const facultyCourses = await FacultyCourse.find({ facultyId: req.user.id }).populate('courseId', 'name code');
-    const courses = facultyCourses.map(fc => fc.courseId);
-    res.json(courses);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
+  // Only return courses assigned to this faculty (from assignedCourses)
+  const faculty = await User.findById(req.user.id).populate({
+    path: 'assignedCourses',
+    select: 'name code'
+  });
+  res.json(faculty.assignedCourses || []);
 });
 
 // Get evaluations/tests to grade
@@ -37,6 +70,55 @@ router.get('/students', protect, authorize('faculty'), async (req, res) => {
   res.json(students);
 });
 
+// GET /api/faculty/students - grouped by course+batch
+router.get('/students', protect, authorize('faculty'), async (req, res) => {
+  try {
+    // Get faculty's assignedCourseBatches with course populated
+    const faculty = await User.findById(req.user.id)
+      .populate({
+        path: 'assignedCourseBatches.course',
+        select: 'name'
+      })
+      .lean();
+
+    if (!faculty || !Array.isArray(faculty.assignedCourseBatches)) {
+      return res.json([]);
+    }
+
+    // Build result: [{ courseName, semester, students: [...] }]
+    const result = [];
+
+    for (const acb of faculty.assignedCourseBatches) {
+      const courseObj = acb.course && typeof acb.course === 'object' ? acb.course : null;
+      if (!courseObj || !Array.isArray(acb.batches)) continue;
+
+      const courseName = courseObj.name;
+      const semester = courseSemesterMap[courseName] || null;
+
+      for (const batch of acb.batches) {
+        // Find students for this batch and semester
+        const students = await User.find({
+          role: 'student',
+          batch,
+          semester,
+        }).select('name roll_number batch semester department').lean();
+
+        result.push({
+          courseName,
+          semester,
+          batch,
+          students
+        });
+      }
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error('faculty/students error:', err);
+    res.status(500).json({ message: 'Failed to fetch students' });
+  }
+});
+
 // Get faculty’s schedule/timetable
 router.get('/schedule', protect, authorize('faculty'), async (req, res) => {
   const schedule = await Schedule.find({ faculty: req.user.id });
@@ -52,132 +134,52 @@ router.get('/question-pool', protect, authorize('faculty'), async (req, res) => 
   res.json(courses);
 });
 
-// Grade an evaluation
-router.put('/evaluations/:id/grade', protect, authorize('faculty'), async (req, res) => {
+// Upload lab manual (secure: only for assigned course-batch pairs)
+router.post('/lab-manuals/upload', protect, authorize('faculty'), manualUpload.single('file'), async (req, res) => {
   try {
-    const evaluation = await Evaluation.findById(req.params.id);
+    const { course, batch, title } = req.body;
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+    if (!course || !batch) return res.status(400).json({ message: 'Course and batch are required' });
 
-    if (!evaluation) {
-      return res.status(404).json({ message: 'Evaluation not found' });
+    // Validate: faculty can only upload for assigned course-batch
+    const faculty = await User.findById(req.user.id);
+    const found = (faculty.assignedCourseBatches || []).find(
+      acb =>
+        acb.course.toString() === course &&
+        Array.isArray(acb.batches) &&
+        acb.batches.includes(batch)
+    );
+    if (!found) {
+      return res.status(403).json({ message: 'You are not assigned to this course and batch.' });
     }
 
-    if (evaluation.faculty.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to grade this evaluation' });
-    }
+    // Optionally: check course exists
+    const courseObj = await Course.findById(course);
+    if (!courseObj) return res.status(400).json({ message: 'Invalid course.' });
 
-    evaluation.marks = req.body.marks;
-    evaluation.status = 'graded'; // Or 'completed'
-    await evaluation.save();
-
-    res.json({ message: 'Evaluation graded successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Create a new question
-router.post('/questions', protect, authorize('faculty'), async (req, res) => {
-  try {
-    const { text, test } = req.body;
-
-    const newQuestion = new Question({
-      text,
-      test
+    // Save manual
+    const manual = new LabManual({
+      course,
+      faculty: req.user.id,
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      batch,
+      title: title || req.file.originalname
     });
-
-    const question = await newQuestion.save();
-
-    // Update the Test model to include the new question
-    const testObj = await Test.findById(test);
-    if (testObj) {
-      testObj.questions.push(question._id);
-      await testObj.save();
-    }
-
-    res.status(201).json({ message: 'Question created successfully', question });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    await manual.save();
+    res.json({ message: 'Lab manual uploaded', manual });
+  } catch (err) {
+    res.status(500).json({ message: 'Upload failed', error: err.message });
   }
 });
 
-// Get reports
-router.get('/reports', protect, authorize('faculty'), async (req, res) => {
+// List lab manuals for faculty
+router.get('/lab-manuals', protect, authorize('faculty'), async (req, res) => {
   try {
-    const { course, type } = req.query;
-
-    if (!course || !type) {
-      return res.status(400).json({ message: 'Course and report type are required' });
-    }
-
-    let reportData = [];
-
-    switch (type) {
-      case 'performance':
-        // Fetch class performance data
-        const courseObj = await Course.findById(course).populate('evaluations');
-        if (!courseObj) {
-          return res.status(404).json({ message: 'Course not found' });
-        }
-
-        const evaluations = courseObj.evaluations;
-        let totalMarks = 0;
-        evaluations.forEach(ev => {
-          totalMarks += ev.marks || 0;
-        });
-        const averageMarks = evaluations.length > 0 ? totalMarks / evaluations.length : 0;
-
-        // Assuming pass mark is 40
-        const passPercentage = evaluations.filter(ev => ev.marks >= 40).length / evaluations.length * 100;
-
-        reportData = [{ averageMarks, passPercentage }];
-        break;
-      case 'progress':
-        // Fetch student progress data
-        const courseObj2 = await Course.findById(course).populate({
-          path: 'students',
-          populate: { path: 'evaluations' }
-        });
-        if (!courseObj2) {
-          return res.status(404).json({ message: 'Course not found' });
-        }
-
-        reportData = courseObj2.students.map(student => {
-          return {
-            student: student.name,
-            evaluations: student.evaluations.map(ev => ({
-              test: ev.name,
-              marks: ev.marks
-            }))
-          };
-        });
-        break;
-      case 'attendance':
-        // Fetch attendance data
-        const courseObj3 = await Course.findById(course).populate('students');
-        if (!courseObj3) {
-          return res.status(404).json({ message: 'Course not found' });
-        }
-
-        reportData = courseObj3.students.map(student => {
-          // Assuming attendance is stored in student model
-          return {
-            student: student.name,
-            attended: student.attended || 0,
-            total: student.totalClasses || 0,
-            percentage: student.attended / student.totalClasses * 100 || 0
-          };
-        });
-        break;
-      default:
-        return res.status(400).json({ message: 'Invalid report type' });
-    }
-
-    res.json(reportData);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    const manuals = await LabManual.find({ faculty: req.user.id }).populate('course', 'name code');
+    res.json(manuals);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch manuals' });
   }
 });
 
