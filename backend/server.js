@@ -1,9 +1,11 @@
+const path = require('path');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth');
 const logsRoutes = require('./routes/logs');
+const studentRoutes = require('./routes/student');
 
 (async () => {
   // Load environment variables
@@ -14,6 +16,7 @@ const logsRoutes = require('./routes/logs');
   // Middleware
   app.use(cors());
   app.use(express.json());
+  app.use('/uploads/labmanuals', express.static(path.join(__dirname, 'uploads', 'labmanuals')));
 
   // Connect to MongoDB
   try {
@@ -26,7 +29,8 @@ const logsRoutes = require('./routes/logs');
   // Routes
   app.use('/api/auth', authRoutes);
   app.use('/api/logs', logsRoutes);
-  
+  app.use('/api/student', studentRoutes);
+
   app.use('/api/faculty', require('./routes/faculty'));
 
   // Error handling middleware

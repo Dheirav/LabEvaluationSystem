@@ -22,7 +22,14 @@ const userSchema = new mongoose.Schema({
         max: 8,
         // Only required for students, but do NOT set required here to avoid issues for faculty/admin
     },
-    session_token: { type: String, default: null }
+    session_token: { type: String, default: null },
+    assignedCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
+    assignedCourseBatches: [
+        {
+            course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
+            batches: [{ type: String, enum: ['N', 'P', 'Q'] }]
+        }
+    ]
  }); 
 
 
@@ -58,3 +65,4 @@ module.exports = mongoose.model('User', userSchema);
 // The user_id field is unique, ensuring that no two users can have the same user_id.
 // The schema is designed to be flexible, allowing for easy extension in the future if additional fields or functionality are needed.
 // The use of async/await in the pre-save middleware and comparePassword method allows for cleaner and more readable asynchronous code.
+// Added assignedCourseBatches field to support per-course batch assignment for faculty.

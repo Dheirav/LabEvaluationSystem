@@ -330,8 +330,6 @@ router.post('/login', async (req, res) => {
     });
 });
 
-// ...rest of your routes (get_users, update, delete, logout, etc.)...
-
 // Get all users
 router.get('/get_users', protect, authorize('admin'), async (req, res) => {
   try {
@@ -345,9 +343,10 @@ router.get('/get_users', protect, authorize('admin'), async (req, res) => {
 // Update user
 router.put('/update/users/:id', protect, authorize('admin'), async (req, res) => {
     try {
+        // At this point, req.user is guaranteed to exist and be admin due to authorize('admin')
         const updateFields = { ...req.body };
-        // Allow updating these fields
-        const allowedFields = ['name', 'user_id', 'roll_number', 'role', 'batch', 'semester'];
+        // Allow updating only these fields
+        const allowedFields = ['name', 'user_id', 'roll_number', 'role', 'batch', 'semester', 'department'];
         Object.keys(updateFields).forEach(key => {
             if (!allowedFields.includes(key)) {
                 delete updateFields[key];
@@ -359,19 +358,29 @@ router.put('/update/users/:id', protect, authorize('admin'), async (req, res) =>
             return res.status(400).json({ message: 'Invalid batch' });
         }
 
+        // Find and update user
         const user = await User.findByIdAndUpdate(
             req.params.id,
             { $set: updateFields },
             { new: true }
         ).select('-password');
-        res.json(user);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
         // Log the action
         await logAction({
             user_id: req.user.user_id || 'system',
             action: 'update_user',
             details: `Updated user ${user.user_id} (${user.role})`
         });
+
+        res.json(user);
     } catch (error) {
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Unauthorized: Invalid or expired token.' });
+        }
         res.status(500).json({ message: 'Error updating user' });
     }
 });
@@ -415,6 +424,167 @@ router.post('/logout', protect, async (req, res) => {
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Logout failed' });
+  }
+});
+
+// Assign courses to faculty (admin only)
+router.put('/faculty/:id/assign-courses', protect, authorize('admin'), async (req, res) => {
+  try {
+    let { courseIds } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user || user.role !== 'faculty') {
+      return res.status(404).json({ message: 'Faculty not found' });
+    }
+
+    // Always resolve all codes to ObjectId, allow for mixed input (ObjectId or code)
+    const Course = require('../models/Course');
+    const mongoose = require('mongoose');
+    const codes = [];
+    const objectIds = [];
+    for (const id of courseIds) {
+      if (typeof id === 'string' && id.length < 24) {
+        codes.push(id);
+      } else if (mongoose.Types.ObjectId.isValid(id)) {
+        objectIds.push(id);
+      }
+    }
+    let resolvedIds = [...objectIds];
+    if (codes.length > 0) {
+      const courses = await Course.find({ code: { $in: codes } });
+      // Debug log
+      console.log('Assigning codes:', codes);
+      console.log('Found codes:', courses.map(c => c.code));
+      if (courses.length !== codes.length) {
+        const foundCodes = courses.map(c => c.code);
+        const missing = codes.filter(code => !foundCodes.includes(code));
+        return res.status(400).json({ message: 'Some course codes not found', missing });
+      }
+      resolvedIds = [...resolvedIds, ...courses.map(c => c._id.toString())];
+    }
+
+    // Remove duplicates and ensure all are strings (ObjectId as string)
+    user.assignedCourses = Array.from(new Set(resolvedIds));
+    await user.save();
+    res.json({ message: 'Courses assigned successfully', assignedCourses: user.assignedCourses });
+  } catch (err) {
+    console.error('Assign courses error:', err);
+    res.status(500).json({ message: 'Failed to assign courses' });
+  }
+});
+
+// Assign batches for a course to a faculty
+router.put('/faculty/:id/assign-course-batches', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { courseId, batches, assignedCourseBatches } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user || user.role !== 'faculty') {
+      return res.status(404).json({ message: 'Faculty not found' });
+    }
+    const Course = require('../models/Course');
+    const mongoose = require('mongoose');
+
+    // Helper to resolve course code to ObjectId
+    async function resolveCourseId(idOrCode) {
+      if (mongoose.Types.ObjectId.isValid(idOrCode)) return idOrCode;
+      // Try to resolve as code
+      const courseDoc = await Course.findOne({ code: idOrCode });
+      if (!courseDoc) throw new Error(`Course not found for code: ${idOrCode}`);
+      return courseDoc._id;
+    }
+
+    if (Array.isArray(assignedCourseBatches)) {
+      // Convert all course codes to ObjectIds if needed
+      const resolved = [];
+      for (const item of assignedCourseBatches) {
+        if (!item.course || !Array.isArray(item.batches) || item.batches.length === 0) {
+          return res.status(400).json({ message: 'Each assignment must have a course and at least one batch.' });
+        }
+        const resolvedCourseId = await resolveCourseId(item.course);
+        resolved.push({ course: resolvedCourseId, batches: item.batches });
+      }
+      user.assignedCourseBatches = resolved;
+      await user.save();
+      return res.json({ message: 'Course batches assigned', assignedCourseBatches: user.assignedCourseBatches });
+    }
+
+    // Legacy: assign one courseId+batches at a time
+    if (!courseId || !Array.isArray(batches) || batches.length === 0) {
+      return res.status(400).json({ message: 'Course and batches are required' });
+    }
+    const resolvedCourseId = await resolveCourseId(courseId);
+    user.assignedCourseBatches = (user.assignedCourseBatches || []).filter(
+      entry => entry.course.toString() !== resolvedCourseId.toString()
+    );
+    user.assignedCourseBatches.push({ course: resolvedCourseId, batches });
+    await user.save();
+    res.json({ message: 'Course batches assigned', assignedCourseBatches: user.assignedCourseBatches });
+  } catch (err) {
+    console.error('Assign course batches error:', err);
+    console.error('Request body:', req.body);
+    res.status(500).json({ message: 'Failed to assign course batches', error: err.message, stack: err.stack });
+  }
+});
+
+// Get all courses (for admin UI)
+router.get('/courses', protect, authorize('admin'), async (req, res) => {
+  try {
+    const Course = require('../models/Course');
+    const courses = await Course.find();
+    res.json(courses);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch courses' });
+  }
+});
+
+// Get courses assigned to a faculty (for faculty dashboard)
+router.get('/faculty/courses', protect, authorize('faculty'), async (req, res) => {
+  try {
+    // Always fetch the latest user with populated assignedCourseBatches.course
+    const user = await User.findById(req.user.id)
+      .populate({
+        path: 'assignedCourseBatches.course',
+        select: 'name code'
+      })
+      .lean();
+
+    if (!user) return res.status(404).json({ message: 'Faculty not found' });
+
+    // --- CRITICAL: Only return assignedCourseBatches, ignore legacy assignedCourses ---
+    // Optionally, clear out assignedCourses if you want to fully migrate:
+    // await User.findByIdAndUpdate(req.user.id, { $set: { assignedCourses: [] } });
+
+    // Only return courses that are actually assigned in assignedCourseBatches
+    const result = (user.assignedCourseBatches || []).map(acb => {
+      let courseObj = acb.course && typeof acb.course === 'object'
+        ? acb.course
+        : null;
+      return {
+        _id: courseObj?._id || acb.course,
+        name: courseObj?.name || '',
+        code: courseObj?.code || '',
+        batches: acb.batches
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('faculty/courses error:', err);
+    res.status(500).json({ message: 'Failed to fetch assigned courses' });
+  }
+});
+
+// Utility route: Clear legacy assignedCourses for all faculty (run once, then remove!)
+// WARNING: This is a destructive operation. Use only for migration/cleanup.
+router.post('/admin/clear-legacy-assigned-courses', protect, authorize('admin'), async (req, res) => {
+  try {
+    // Remove assignedCourses for all faculty
+    const result = await User.updateMany(
+      { role: 'faculty' },
+      { $unset: { assignedCourses: "" } }
+    );
+    res.json({ message: 'Legacy assignedCourses field removed for all faculty', result });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to remove legacy assignedCourses', error: err.message });
   }
 });
 
