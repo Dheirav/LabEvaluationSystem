@@ -23,11 +23,23 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import BookIcon from '@mui/icons-material/Book';
 
 const drawerWidth = 240;
 
+const items = [
+    { text: 'Dashboard', path: '/admin', icon: <DashboardIcon /> },
+    { text: 'Evaluations', path: '/admin/evaluations', icon: <AssignmentIcon /> },
+    { text: 'Students', path: '/admin/students', icon: <PeopleIcon /> },
+    { text: 'Faculty', path: '/admin/faculty', icon: <SchoolIcon /> },
+    { text: 'Server Logs', path: '/admin/server-logs', icon: <BarChartIcon /> },
+    { text: 'User Management', path: '/admin/user-management', icon: <PersonAddIcon /> },
+    { text: 'Course Management', path: '/admin/course-management', icon: <BookIcon /> },
+    { text: 'Faculty Course Assignment', path: '/admin/faculty-course-assignment', icon: <AssignmentIcon /> },
+  ].sort((a, b) => a.text.localeCompare(b.text));
+
 const AdminSidebar = () => {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const location = useLocation();
   const theme = useTheme();
   const navigate = useNavigate();
@@ -35,15 +47,6 @@ const AdminSidebar = () => {
   const handleDrawerToggle = () => {
     setOpen(!open);
   };
-
-  const items = [
-    { text: 'Dashboard', path: '/admin', icon: <DashboardIcon /> },
-    { text: 'Evaluations', path: '/admin/evaluations', icon: <AssignmentIcon /> },
-    { text: 'Students', path: '/admin/students', icon: <PeopleIcon /> },
-    { text: 'Faculty', path: '/admin/faculty', icon: <SchoolIcon /> },
-    { text: 'Server Logs', path: '/admin/server-logs', icon: <BarChartIcon /> },
-    { text: 'User Management', path: '/admin/user-management', icon: <PersonAddIcon /> },
-  ];
 
   const handleLogout = async () => {
   const token = localStorage.getItem('token');
