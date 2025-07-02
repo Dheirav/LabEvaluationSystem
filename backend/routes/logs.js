@@ -32,12 +32,8 @@ router.delete('/delete_logs', protect, authorize('admin'), async (req, res) => {
     const result = await ServerLog.deleteMany(filter);
     
     // Log this action
-    await logAction({
-      user_id: req.user.user_id,
-      action: 'delete_logs',
-      details: `User ${req.user.user_id} deleted ${result.deletedCount} logs with filters: ${JSON.stringify(filter)}`
-    });
-    
+    await logAction(req.user, 'delete_logs', `User ${req.user.user_id} deleted ${result.deletedCount} logs with filters: ${JSON.stringify(filter)}`);
+    broadcastLogUpdate();
     res.json({ 
       message: `Successfully deleted ${result.deletedCount} logs`,
       deletedCount: result.deletedCount
@@ -205,6 +201,67 @@ router.get('/download/pdf', protect, authorize('admin'), async (_req, res) => {
   });
 
   doc.end();
+});
+
+// Add dynamic updates: send log update events via SSE
+const clients = [];
+
+router.get('/stream', protect, authorize('admin'), (req, res) => {
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+  res.flushHeaders();
+  clients.push(res);
+  req.on('close', () => {
+    const idx = clients.indexOf(res);
+    if (idx !== -1) clients.splice(idx, 1);
+  });
+});
+
+function broadcastLogUpdate() {
+  for (const client of clients) {
+    client.write(`event: logUpdate\ndata: update\n\n`);
+  }
+}
+
+// After every log change, call broadcastLogUpdate()
+// Example: after delete logs
+router.delete('/delete_logs', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { user, action, from, to, details } = req.query;
+    const filter = {};
+
+    // Build filter object based on query parameters
+    if (user) filter.user = { $regex: user, $options: 'i' };
+    if (action) filter.action = { $regex: action, $options: 'i' };
+    if (details) filter.details = { $regex: details, $options: 'i' };
+    if (from || to) {
+      filter.timestamp = {};
+      if (from) filter.timestamp.$gte = new Date(from);
+      if (to) filter.timestamp.$lte = new Date(to);
+    }
+
+    console.log('Deleting logs with filter:', filter);
+    
+    // Get count of matching documents (for logging)
+    const count = await ServerLog.countDocuments(filter);
+    
+    // Execute the delete operation
+    const result = await ServerLog.deleteMany(filter);
+    
+    // Log this action
+    await logAction(req.user, 'delete_logs', `User ${req.user.user_id} deleted ${result.deletedCount} logs with filters: ${JSON.stringify(filter)}`);
+    broadcastLogUpdate();
+    res.json({ 
+      message: `Successfully deleted ${result.deletedCount} logs`,
+      deletedCount: result.deletedCount
+    });
+  } catch (err) {
+    console.error('Error deleting logs:', err);
+    res.status(500).json({ message: 'Failed to delete logs' });
+  }
 });
 
 module.exports = router;

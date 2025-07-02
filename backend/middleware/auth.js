@@ -9,6 +9,7 @@ exports.protect = async (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.id);
+
         if (!user || user.session_token !== decoded.session_token) {
             return res.status(401).json({ message: 'Session expired or logged in elsewhere.' });
         }

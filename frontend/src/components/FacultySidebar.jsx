@@ -43,6 +43,9 @@ export default function FacultySidebar({ facultyName }) {
     { text: 'Schedule', path: '/faculty/schedule', icon: <ScheduleIcon /> },
     { text: 'Question Pool', path: '/faculty/question-pool', icon: <QuizIcon /> },
     { text: 'Lab Manuals', path: '/faculty/lab-manuals', icon: <DescriptionIcon /> },
+    { text: 'Test Creation', path: '/faculty/test-creation', icon: <QuizIcon /> },
+    { text: 'My Tests', path: '/faculty/tests', icon: <AssignmentIcon /> },
+    { text: 'Reports', path: '/faculty/reports', icon: <AssignmentIcon /> },
   ];
 
   const handleLogout = () => {

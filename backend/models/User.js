@@ -30,8 +30,7 @@ const userSchema = new mongoose.Schema({
             batches: [{ type: String, enum: ['N', 'P', 'Q'] }]
         }
     ]
- }); 
-
+}); 
 
 // Ensure password is always hashed (even on update)
 userSchema.pre('save', async function(next) {
@@ -66,3 +65,4 @@ module.exports = mongoose.model('User', userSchema);
 // The schema is designed to be flexible, allowing for easy extension in the future if additional fields or functionality are needed.
 // The use of async/await in the pre-save middleware and comparePassword method allows for cleaner and more readable asynchronous code.
 // Added assignedCourseBatches field to support per-course batch assignment for faculty.
+

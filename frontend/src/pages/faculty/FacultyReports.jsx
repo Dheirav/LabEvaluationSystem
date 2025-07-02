@@ -3,7 +3,6 @@ import {
   Box, Typography, Paper, CircularProgress, FormControl, InputLabel, Select, MenuItem, Button, Table, TableHead, TableRow, TableCell, TableBody
 } from '@mui/material';
 import FacultySidebar from '../../components/FacultySidebar';
-import Header from '../../components/Header';
 import { AuthContext } from '../../context/AuthContext';
 import axios from 'axios';
 
@@ -55,7 +54,7 @@ const FacultyReports = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #282f2f, #becdcd)' }}>
-      <Header title="Faculty - Reports" />
+      {/* <Header title="Faculty - Reports" /> */}
       <FacultySidebar facultyName={user?.name} />
       <Box component="main" sx={{ flexGrow: 1, p: 3, overflow: 'auto' }}>
         <Typography variant="h4" gutterBottom color="white">Reports</Typography>

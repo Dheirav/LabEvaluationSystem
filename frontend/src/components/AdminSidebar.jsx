@@ -29,13 +29,10 @@ const drawerWidth = 240;
 
 const items = [
     { text: 'Dashboard', path: '/admin', icon: <DashboardIcon /> },
-    { text: 'Evaluations', path: '/admin/evaluations', icon: <AssignmentIcon /> },
-    { text: 'Students', path: '/admin/students', icon: <PeopleIcon /> },
-    { text: 'Faculty', path: '/admin/faculty', icon: <SchoolIcon /> },
     { text: 'Server Logs', path: '/admin/server-logs', icon: <BarChartIcon /> },
     { text: 'User Management', path: '/admin/user-management', icon: <PersonAddIcon /> },
     { text: 'Course Management', path: '/admin/course-management', icon: <BookIcon /> },
-    { text: 'Faculty Course Assignment', path: '/admin/faculty-course-assignment', icon: <AssignmentIcon /> },
+    { text: 'Faculty Course Assignment', path: '/admin/faculty-course-assignment', icon: <SchoolIcon /> },
   ].sort((a, b) => a.text.localeCompare(b.text));
 
 const AdminSidebar = () => {
@@ -49,23 +46,31 @@ const AdminSidebar = () => {
   };
 
   const handleLogout = async () => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-    } catch (err) {
-      // Optionally handle error (e.g., network issues)
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (err) {
+        // Optionally handle error (e.g., network issues)
+      }
     }
-  }
-  localStorage.removeItem('token');
-  navigate('/login');
-};
+    localStorage.removeItem('token');
+    // Also clear token from axios defaults if used
+    if (window.axios) {
+      delete window.axios.defaults.headers.common['Authorization'];
+    }
+    // Optionally, if using AuthContext, call logout if available
+    if (typeof window.logout === 'function') {
+      window.logout();
+    }
+    navigate('/login');
+  };
   let user = null;
   const token = localStorage.getItem('token');
   if (token) {
