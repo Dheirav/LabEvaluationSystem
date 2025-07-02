@@ -12,6 +12,9 @@ import CourseManagement from './pages/admin/CourseManagement';
 import FacultyStudents from './pages/faculty/FacultyStudents';
 import FacultySchedule from './pages/faculty/FacultySchedule';
 import FacultyQuestionPool from './pages/faculty/FacultyQuestionPool';
+import FacultyLabManuals from './pages/faculty/FacultyLabManuals';
+import AdminFaculty from './pages/admin/AdminFaculty';
+import AdminStudents from './pages/admin/AdminStudents';
 import FacultyReports from './pages/faculty/FacultyReports';
 import FacultyCourseAssignment from './pages/admin/FacultyCourseAssignment';
 import FacultyTestCreation from './pages/faculty/FacultyTestCreation';
@@ -79,21 +82,21 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/faculty/reports" element={
+          <Route path="/faculty/lab-manuals" element={
             <ProtectedRoute allowedRoles={['faculty']}>
-              <FacultyReports />
+              <FacultyLabManuals />
             </ProtectedRoute>
           } />
 
-          <Route path="/admin/course-management" element={
+          <Route path="/admin/faculty" element={
             <ProtectedRoute allowedRoles={['admin']}>
-              <CourseManagement />
+              <AdminFaculty />
             </ProtectedRoute>
           } />
 
-          <Route path="/admin/faculty-course-assignment" element={
+          <Route path="/admin/students" element={
             <ProtectedRoute allowedRoles={['admin']}>
-              <FacultyCourseAssignment />
+              <AdminStudents />
             </ProtectedRoute>
           } />
 

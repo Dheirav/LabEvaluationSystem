@@ -22,6 +22,7 @@ import QuizIcon from '@mui/icons-material/Quiz';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import DescriptionIcon from '@mui/icons-material/Description';
 
 const drawerWidth = 220;
 
@@ -41,6 +42,7 @@ export default function FacultySidebar({ facultyName }) {
     { text: 'Students', path: '/faculty/students', icon: <PeopleIcon /> },
     { text: 'Schedule', path: '/faculty/schedule', icon: <ScheduleIcon /> },
     { text: 'Question Pool', path: '/faculty/question-pool', icon: <QuizIcon /> },
+    { text: 'Lab Manuals', path: '/faculty/lab-manuals', icon: <DescriptionIcon /> },
     { text: 'Test Creation', path: '/faculty/test-creation', icon: <QuizIcon /> },
     { text: 'My Tests', path: '/faculty/tests', icon: <AssignmentIcon /> },
     { text: 'Reports', path: '/faculty/reports', icon: <AssignmentIcon /> },

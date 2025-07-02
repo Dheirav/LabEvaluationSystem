@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -6,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const logsRoutes = require('./routes/logs');
 const adminRoutes = require('./routes/admin'); 
 const facultyRoutes = require('./routes/faculty');
+const studentRoutes = require('./routes/student');
 
 (async () => {
   // Load environment variables
@@ -16,6 +18,7 @@ const facultyRoutes = require('./routes/faculty');
   // Middleware
   app.use(cors());
   app.use(express.json());
+  app.use('/uploads/labmanuals', express.static(path.join(__dirname, 'uploads', 'labmanuals')));
 
   // Connect to MongoDB
   try {
@@ -27,9 +30,10 @@ const facultyRoutes = require('./routes/faculty');
 
   // Routes
   app.use('/api/auth', authRoutes);
-  app.use('/api/logs', logsRoutes)
-  app.use('/api/admin', adminRoutes); 
-  app.use('/api/faculty', facultyRoutes);
+  app.use('/api/logs', logsRoutes);
+  app.use('/api/student', studentRoutes);
+
+  app.use('/api/faculty', require('./routes/faculty'));
 
   // Error handling middleware
   app.use((err, req, res, next) => {
