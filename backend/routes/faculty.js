@@ -10,6 +10,7 @@ const QuestionPool = require('../models/QuestionPool');
 const LabManual = require('../models/LabManual');
 const multer = require('multer');
 const path = require('path');
+const mongoose = require('mongoose'); // Add this at the top if not present
 
 // Multer storage for lab manuals
 const manualStorage = multer.diskStorage({
@@ -48,16 +49,28 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const Test = require('../models/Test');
 
-// Get courses assigned to the faculty
-router.get('/courses', protect, authorize('faculty'), async (req, res) => {
-  // Only return courses assigned to this faculty (from assignedCourses)
-  const faculty = await User.findById(req.user.id).populate({
-    path: 'assignedCourses',
-    select: 'name code'
-  });
-  res.json(faculty.assignedCourses || []);
+// Get courses assigned to the faculty (grouped by course, with batches array for each course)
+router.get('/courses',protect, authorize('faculty'), async (req, res) => {
+  try {
+    // Ensure this route is protected and authorized for faculty
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: 'Unauthorized: user not found' });
+    }
+    const assignments = await FacultyCourse.find({ facultyId: req.user.id }).populate('courseId');
+    const result = assignments.map(assign => ({
+      _id: assign._id, // This is the assignment id
+      facultyId: assign.facultyId,
+      courseId: assign.courseId, // Populated course object
+      batch: assign.batch,
+      semester: assign.semester,
+      assignedDate: assign.assignedDate
+    }));
+    res.json(result);
+  } catch (err) {
+    console.error('faculty/courses error:', err);
+    res.status(500).json({ message: 'Error fetching assigned courses' });
+  }
 });
-
 // Get evaluations/tests to grade
 router.get('/evaluations', protect, authorize('faculty'), async (req, res) => {
   const evaluations = await Evaluation.find({ faculty: req.user.id });
@@ -108,7 +121,8 @@ router.get('/students', protect, authorize('faculty'), async (req, res) => {
     }
 
     // Build result: [{ courseName, semester, students: [...] }]
-    const result = [];
+    const result = [
+    ];
 
     for (const acb of faculty.assignedCourseBatches) {
       const courseObj = acb.course && typeof acb.course === 'object' ? acb.course : null;
@@ -163,16 +177,10 @@ router.post('/lab-manuals/upload', protect, authorize('faculty'), manualUpload.s
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     if (!course || !batch) return res.status(400).json({ message: 'Course and batch are required' });
 
-    // Validate: faculty can only upload for assigned course-batch
-    const faculty = await User.findById(req.user.id);
-    const found = (faculty.assignedCourseBatches || []).find(
-      acb =>
-        acb.course.toString() === course &&
-        Array.isArray(acb.batches) &&
-        acb.batches.includes(batch)
-    );
-    if (!found) {
-      return res.status(403).json({ message: 'You are not assigned to this course and batch.' });
+    // Validate: faculty can only upload for assigned course-batch-semester using FacultyCourse
+    const assignment = await FacultyCourse.findOne({ facultyId: req.user.id, courseId: course, batch, semester: req.body.semester });
+    if (!assignment) {
+      return res.status(403).json({ message: 'You are not assigned to this course, batch, and semester.' });
     }
 
     // Optionally: check course exists
@@ -192,6 +200,7 @@ router.post('/lab-manuals/upload', protect, authorize('faculty'), manualUpload.s
     res.json({ message: 'Lab manual uploaded', manual });
   } catch (err) {
     res.status(500).json({ message: 'Upload failed', error: err.message });
+  }
 });
 
 // Get all courses with parameters for dynamic question forms

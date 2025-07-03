@@ -36,8 +36,9 @@ export default function StudentSidebar({ studentName }) {
 
   const items = [
     { text: 'Dashboard', path: '/student', icon: <DashboardIcon /> },
+    { text: 'My Courses', path: '/student/courses', icon: <AssignmentIcon /> },
+    { text: 'My Study Materials', path: '/student/materials', icon: <AssignmentIcon /> },
     { text: 'Evaluations', path: '/student/evaluations', icon: <AssignmentIcon /> },
-    { text: 'Tests', path: '/student/tests', icon: <QuizIcon /> }, // Added Tests
     { text: 'Schedule', path: '/student/schedule', icon: <ScheduleIcon /> },
   ];
 

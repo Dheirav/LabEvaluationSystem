@@ -8,6 +8,7 @@ const logsRoutes = require('./routes/logs');
 const adminRoutes = require('./routes/admin'); 
 const facultyRoutes = require('./routes/faculty');
 const studentRoutes = require('./routes/student');
+const attendanceRoutes = require('./routes/attendance');
 
 (async () => {
   // Load environment variables
@@ -32,8 +33,9 @@ const studentRoutes = require('./routes/student');
   app.use('/api/auth', authRoutes);
   app.use('/api/logs', logsRoutes);
   app.use('/api/student', studentRoutes);
-
-  app.use('/api/faculty', require('./routes/faculty'));
+  app.use('/api/faculty', facultyRoutes);
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/attendance', attendanceRoutes);
 
   // Error handling middleware
   app.use((err, req, res, next) => {

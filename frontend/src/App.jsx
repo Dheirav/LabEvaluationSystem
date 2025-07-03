@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
+
 import AdminDashboard from './pages/admin/AdminDashboard';
 import FacultyDashboard from './pages/faculty/FacultyDashboard';
 import StudentDashboard from './pages/student/StudentDashboard';
@@ -16,9 +17,14 @@ import FacultyLabManuals from './pages/faculty/FacultyLabManuals';
 import AdminFaculty from './pages/admin/AdminFaculty';
 import AdminStudents from './pages/admin/AdminStudents';
 import FacultyReports from './pages/faculty/FacultyReports';
+import StudentSchedule from './pages/student/StudentSchedule';
 import FacultyCourseAssignment from './pages/admin/FacultyCourseAssignment';
 import FacultyTestCreation from './pages/faculty/FacultyTestCreation';
 import FacultyTestList from './pages/faculty/FacultyTestList';
+import StudentCourses from './pages/student/StudentCourses';
+import StudentMaterials from './pages/student/StudentMaterials';
+import FacultyAttendance from './pages/faculty/FacultyAttendance';
+import AdminAttendance from './pages/admin/AdminAttendance';
 
 function App() {
   return (
@@ -100,6 +106,18 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/admin/course-management" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <CourseManagement />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/faculty-course-assignment" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <FacultyCourseAssignment />
+            </ProtectedRoute>
+          } />
+
           <Route path="/faculty/test-creation" element={
             <ProtectedRoute allowedRoles={['faculty']}>
               <FacultyTestCreation />
@@ -111,6 +129,34 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/student/courses" element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentCourses />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/student/materials" element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentMaterials />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/student/schedule" element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentSchedule></StudentSchedule>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/faculty/attendance" element={
+            <ProtectedRoute allowedRoles={['faculty']}>
+              <FacultyAttendance />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/attendance" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminAttendance />
+            </ProtectedRoute>
+          } />
         </Routes>
       </Router>
     </AuthProvider>

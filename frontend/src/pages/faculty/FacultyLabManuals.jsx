@@ -21,12 +21,12 @@ import axios from 'axios';
 
 const FacultyLabManuals = () => {
   const { user } = useContext(AuthContext);
-  const [courses, setCourses] = useState([]);
+  const [assignments, setAssignments] = useState([]);
   const [manuals, setManuals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [courseBatchPairs, setCourseBatchPairs] = useState([]);
-  const [selectedPair, setSelectedPair] = useState({ course: '', batch: '' });
+  const [selectedPair, setSelectedPair] = useState({ course: '', batch: '', semester: '' });
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState('');
   const [msg, setMsg] = useState('');
@@ -46,38 +46,41 @@ const FacultyLabManuals = () => {
   }, []);
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get('/api/auth/faculty/courses', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setCourses(res.data || []);
-        // Build course-batch pairs
-        const pairs = [];
-        (res.data || []).forEach(c => {
-          (c.batches || []).forEach(b => {
-            pairs.push({ course: c._id, courseName: c.name, courseCode: c.code, batch: b });
+      const fetchAssignments = async () => {
+        setLoading(true);
+        try {
+          const token = localStorage.getItem('token');
+          const res = await axios.get('/api/faculty/courses', {
+            headers: { Authorization: `Bearer ${token}` }
           });
-        });
-        setCourseBatchPairs(pairs);
-      } catch (err) {
-        setCourses([]);
-        setCourseBatchPairs([]);
-        setMsg('Failed to fetch courses');
-      }
-      setLoading(false);
-    };
+          const assignmentsData = res.data || [];
+          setAssignments(assignmentsData);
+          // Build course-batch-semester pairs for dropdown
+          const pairs = assignmentsData.map(a => ({
+            assignmentId: a._id,
+            course: a.courseId?._id,
+            courseName: a.courseId?.name,
+            courseCode: a.courseId?.code,
+            batch: a.batch,
+            semester: a.semester
+          }));
+          setCourseBatchPairs(pairs);
+        } catch (err) {
+          setAssignments([]);
+          setCourseBatchPairs([]);
+          setMsg('Failed to fetch courses');
+        }
+        setLoading(false);
+      };
 
-    fetchCourses();
-    fetchManuals();
-  }, [fetchManuals]);
+      fetchAssignments();
+      fetchManuals();
+    }, [fetchManuals]);
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!file || !selectedPair.course || !selectedPair.batch) {
-      setMsg('Please select a course, batch, and file.');
+    if (!file || !selectedPair.course || !selectedPair.batch || !selectedPair.semester) {
+      setMsg('Please select a course, batch, semester, and file.');
       return;
     }
     setUploading(true);
@@ -88,6 +91,7 @@ const FacultyLabManuals = () => {
       formData.append('file', file);
       formData.append('course', selectedPair.course);
       formData.append('batch', selectedPair.batch);
+      formData.append('semester', selectedPair.semester);
       formData.append('title', title);
 
       await axios.post('/api/faculty/lab-manuals/upload', formData, {
@@ -99,7 +103,7 @@ const FacultyLabManuals = () => {
 
       setMsg('Upload successful');
       setFile(null);
-      setSelectedPair({ course: '', batch: '' });
+      setSelectedPair({ course: '', batch: '', semester: '' });
       setTitle('');
       if (fileInputRef.current) {
         fileInputRef.current.value = null;
@@ -124,21 +128,21 @@ const FacultyLabManuals = () => {
         <Paper sx={{ p: 3, borderRadius: 3, mt: 2, mb: 3 }}>
           <form onSubmit={handleUpload}>
             <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="course-batch-label">Course & Batch</InputLabel>
+              <InputLabel id="course-batch-label">Course, Batch & Semester</InputLabel>
               <Select
                 labelId="course-batch-label"
                 id="course-batch-select"
-                value={selectedPair.course && selectedPair.batch ? `${selectedPair.course}|${selectedPair.batch}` : ''}
-                label="Course & Batch"
+                value={selectedPair.course && selectedPair.batch && selectedPair.semester ? `${selectedPair.course}|${selectedPair.batch}|${selectedPair.semester}` : ''}
+                label="Course, Batch & Semester"
                 onChange={e => {
-                  const [course, batch] = e.target.value.split('|');
-                  setSelectedPair({ course, batch });
+                  const [course, batch, semester] = e.target.value.split('|');
+                  setSelectedPair({ course, batch, semester });
                 }}
                 required
               >
                 {courseBatchPairs.map(pair => (
-                  <MenuItem key={pair.course + pair.batch} value={`${pair.course}|${pair.batch}`}>
-                    {pair.courseName} ({pair.courseCode}) - Batch {pair.batch}
+                  <MenuItem key={pair.assignmentId} value={`${pair.course}|${pair.batch}|${pair.semester}`}>
+                    {pair.courseName} ({pair.courseCode}) - Batch {pair.batch} - Semester {pair.semester}
                   </MenuItem>
                 ))}
               </Select>
@@ -176,19 +180,19 @@ const FacultyLabManuals = () => {
         {/* Assigned Courses */}
         <Paper sx={{ p: 3, borderRadius: 3, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
-            Assigned Courses & Batches
+            Assigned Courses, Batches & Semesters
           </Typography>
           <List>
-            {courses.length === 0 ? (
+            {assignments.length === 0 ? (
               <ListItem>
                 <ListItemText primary="No assigned courses." />
               </ListItem>
             ) : (
-              courses.map((c) => (
-                <ListItem key={c._id}>
+              assignments.map((a) => (
+                <ListItem key={a._id}>
                   <ListItemText
-                    primary={`${c.name} (${c.code})`}
-                    secondary={`Batches: ${(c.batches || []).join(', ')}`}
+                    primary={`${a.courseId?.name || 'Unknown'} (${a.courseId?.code || ''})`}
+                    secondary={`Batch: ${a.batch} | Semester: ${a.semester}`}
                   />
                 </ListItem>
               ))

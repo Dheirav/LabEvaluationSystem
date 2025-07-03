@@ -19,6 +19,31 @@ async function safeLogAction(user, action, details) {
   }
 }
 
+// Helper to update assignedCourses for students in a batch/semester
+async function updateStudentAssignedCourses(courseId, batch, semester) {
+  // Find all students in the batch and semester
+  const students = await User.find({ role: 'student', batch, semester: Number(semester) });
+  for (const student of students) {
+    // Add courseId if not present
+    if (!student.assignedCourses.some(cid => cid.toString() === courseId.toString())) {
+      student.assignedCourses.push(courseId);
+      await student.save();
+    }
+  }
+}
+
+// Helper to remove course from students in a batch/semester
+async function removeStudentAssignedCourse(courseId, batch, semester) {
+  const students = await User.find({ role: 'student', batch, semester: Number(semester) });
+  for (const student of students) {
+    const before = student.assignedCourses.length;
+    student.assignedCourses = student.assignedCourses.filter(cid => cid.toString() !== courseId.toString());
+    if (student.assignedCourses.length !== before) {
+      await student.save();
+    }
+  }
+}
+
 // Get all courses
 router.get('/courses', protect, authorize('admin'), async (req, res) => {
   try {
@@ -93,6 +118,7 @@ router.post('/assign-faculty', protect, authorize('admin'), async (req, res) => 
     }
     const newAssignment = new FacultyCourse({ facultyId, courseId, batch, semester });
     await newAssignment.save();
+    await updateStudentAssignedCourses(courseId, batch, semester);
     await safeLogAction(req.user, 'assign_faculty', `Assigned faculty ${faculty.name} (${faculty.user_id}) to course ${course.name} (${course.code}) for batch ${batch}, semester ${semester}`);
     res.status(201).json({ message: 'Faculty assigned to course successfully', assignment: newAssignment });
   } catch (error) {
@@ -192,6 +218,7 @@ router.put('/faculty-course/:assignmentId', protect, authorize('admin'), async (
     assignment.batch = batch;
     if (semester !== undefined) assignment.semester = semester;
     await assignment.save();
+    await updateStudentAssignedCourses(courseId, batch, semester);
     await safeLogAction(req.user, 'update_faculty_assignment', `Updated faculty course assignment: ${assignmentId} to course ${courseId}, batch ${batch}, semester ${semester}`);
     res.json({ message: 'Assignment updated successfully', assignment });
   } catch (error) {
@@ -208,6 +235,7 @@ router.delete('/faculty-course/:assignmentId', protect, authorize('admin'), asyn
     if (!assignment) {
       return res.status(404).json({ message: 'Assignment not found' });
     }
+    await removeStudentAssignedCourse(assignment.courseId, assignment.batch, assignment.semester);
     await safeLogAction(req.user, 'delete_faculty_assignment', `Deleted faculty course assignment: ${assignmentId}`);
     res.json({ message: 'Assignment deleted successfully' });
   } catch (error) {

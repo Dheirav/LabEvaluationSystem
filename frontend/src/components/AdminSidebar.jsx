@@ -33,6 +33,7 @@ const items = [
     { text: 'User Management', path: '/admin/user-management', icon: <PersonAddIcon /> },
     { text: 'Course Management', path: '/admin/course-management', icon: <BookIcon /> },
     { text: 'Faculty Course Assignment', path: '/admin/faculty-course-assignment', icon: <SchoolIcon /> },
+    { text: 'Attendance', path: '/admin/attendance', icon: <PeopleIcon /> },
   ].sort((a, b) => a.text.localeCompare(b.text));
 
 const AdminSidebar = () => {
