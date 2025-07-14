@@ -22,7 +22,12 @@ const userSchema = new mongoose.Schema({
         max: 8,
         // Only required for students, but do NOT set required here to avoid issues for faculty/admin
     },
-    session_token: { type: String, default: null },
+    sessions: [
+        {
+            token: { type: String },
+            createdAt: { type: Date, default: Date.now }
+        }
+    ],
     assignedCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
     assignedCourseBatches: [
         {

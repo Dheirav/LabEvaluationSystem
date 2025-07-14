@@ -10,7 +10,16 @@ exports.protect = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.id);
 
-        if (!user || user.session_token !== decoded.session_token) {
+        // For new session logic: check if session_token is present in user's sessions array
+        let validSession = false;
+        if (user && Array.isArray(user.sessions)) {
+            validSession = user.sessions.some(s => s.token === decoded.session_token);
+        }
+        // For legacy (single session_token)
+        if (user && user.session_token && user.session_token === decoded.session_token) {
+            validSession = true;
+        }
+        if (!user || !validSession) {
             return res.status(401).json({ message: 'Session expired or logged in elsewhere.' });
         }
         req.user = user;

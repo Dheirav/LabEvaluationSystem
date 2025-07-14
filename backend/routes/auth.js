@@ -71,7 +71,9 @@ router.post('/register/individual', protect, authorize('admin'), async (req, res
         await logAction({
           user_id: req.user.user_id || 'system',
           action: 'create_user',
-          details: actionDetails
+          details: actionDetails,
+          ip: req.headers['x-forwarded-for']?.split(',').shift() || req.socket?.remoteAddress || req.connection?.remoteAddress || '',
+          system_id: req.body.system_id || req.headers['user-agent'] || 'unknown'
         });
 
         // Return response including batch info if relevant
@@ -221,7 +223,9 @@ router.post('/register/bulk', protect, authorize('admin'), multerUpload.single('
             await logAction({
                 user_id: req.user.user_id || 'system',
                 action: 'create_user',
-                details: `Bulk created user ${newUser.user_id} (${role})${userData.batch ? ` assigned to batch ${userData.batch}` : ''}${userData.semester ? `, semester ${userData.semester}` : ''}`
+                details: `Bulk created user ${newUser.user_id} (${role})${userData.batch ? ` assigned to batch ${userData.batch}` : ''}${userData.semester ? `, semester ${userData.semester}` : ''}`,
+                ip: req.headers['x-forwarded-for']?.split(',').shift() || req.socket?.remoteAddress || req.connection?.remoteAddress || '',
+                system_id: req.body.system_id || req.headers['user-agent'] || 'unknown'
             });
             createdUsers.push({ name: newUser.name, user_id: newUser.user_id, roll_number: newUser.roll_number, role: newUser.role, batch: newUser.batch, semester: newUser.semester });
         }
@@ -275,35 +279,37 @@ router.post('/login', async (req, res) => {
         return res.status(401).json({ message: 'Invalid password' });
     }
 
-    // Only block concurrent login for students
-    if (user.role === 'student' && user.session_token) {
-        await logAction({
-            user_id: user_id,
-            action: 'login_attempt',
-            details: 'ALERT: student already logged in elsewhere',
-            ip: req.headers['x-forwarded-for']?.split(',').shift() ||
-                req.socket?.remoteAddress ||
-                req.connection?.remoteAddress ||
-                '',
-            system_id: req.body.system_id || req.headers['user-agent'] || 'unknown'
-        });
-        return res.status(401).json({ message: 'Student is already logged in elsewhere. Please logout first.' });
+    // Only apply session logic for students
+    let sessionToken = null;
+    let ip = req.headers['x-forwarded-for']?.split(',').shift() || req.socket?.remoteAddress || req.connection?.remoteAddress || '';
+    let system_id = req.body.system_id || req.headers['user-agent'] || 'unknown';
+
+    if (user.role === 'student') {
+        // Ensure sessions array exists
+        user.sessions = user.sessions || [];
+        // If there are existing sessions, remove the oldest
+        if (user.sessions.length > 0) {
+            // Sort by createdAt ascending, remove the oldest
+            user.sessions.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            const oldestSession = user.sessions.shift();
+            await logAction({
+                user_id: user.user_id,
+                action: 'session_closed',
+                details: `Closed oldest session token: ${oldestSession.token}`,
+                ip,
+                system_id
+            });
+        }
+        // Create new session
+        sessionToken = uuidv4();
+        user.sessions.push({ token: sessionToken, createdAt: new Date() });
+        await user.save();
+    } else {
+        // For non-students, keep legacy logic (single session)
+        sessionToken = uuidv4();
+        user.sessions = [{ token: sessionToken, createdAt: new Date() }];
+        await user.save();
     }
-
-    // Get IP address
-    const ip =
-        req.headers['x-forwarded-for']?.split(',').shift() ||
-        req.socket?.remoteAddress ||
-        req.connection?.remoteAddress ||
-        '';
-
-    // Get system info from request
-    const system_id = req.body.system_id || req.headers['user-agent'] || 'unknown';
-
-    // Generate a new session token
-    const sessionToken = uuidv4();
-    user.session_token = sessionToken;
-    await user.save();
 
     // Include sessionToken in JWT
     const token = jwt.sign(
@@ -374,7 +380,9 @@ router.put('/update/users/:id', protect, authorize('admin'), async (req, res) =>
         await logAction({
             user_id: req.user.user_id || 'system',
             action: 'update_user',
-            details: `Updated user ${user.user_id} (${user.role})`
+            details: `Updated user ${user.user_id} (${user.role})`,
+            ip: req.headers['x-forwarded-for']?.split(',').shift() || req.socket?.remoteAddress || req.connection?.remoteAddress || '',
+            system_id: req.body.system_id || req.headers['user-agent'] || 'unknown'
         });
 
         res.json(user);
@@ -397,7 +405,9 @@ router.delete('/delete/users/:id', protect, authorize('admin'), async (req, res)
     await logAction({
       user_id: req.user.user_id || 'system',
       action: 'delete_user',
-      details: `Deleted user with ID ${user.user_id})`
+      details: `Deleted user with ID ${user.user_id})`,
+      ip: req.headers['x-forwarded-for']?.split(',').shift() || req.socket?.remoteAddress || req.connection?.remoteAddress || '',
+      system_id: req.body.system_id || req.headers['user-agent'] || 'unknown'
     });
     res.json({ message: `User ${user.user_id} deleted successfully` });
   } catch (error) {
@@ -413,13 +423,16 @@ router.post('/logout', protect, async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    user.session_token = null;
+    // Remove all sessions for user on logout
+    user.sessions = [];
     await user.save();
 
     await logAction({
       user_id: user.user_id,
       action: 'logout',
-      details: 'User logged out and session_token cleared'
+      details: 'User logged out and all sessions cleared',
+      ip: req.headers['x-forwarded-for']?.split(',').shift() || req.socket?.remoteAddress || req.connection?.remoteAddress || '',
+      system_id: req.body.system_id || req.headers['user-agent'] || 'unknown'
     });
 
     res.json({ message: 'Logged out successfully' });
