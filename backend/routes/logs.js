@@ -60,13 +60,36 @@ router.get('/get_logs', protect, authorize('admin'), async (req, res) => {
 
     // Count total documents for pagination
     const total = await ServerLog.countDocuments(filter);
-    
+
     // Get paginated results
-    const logs = await ServerLog.find(filter)
+    const logsRaw = await ServerLog.find(filter)
       .sort({ timestamp: -1 })
       .skip(page * rowsPerPage)
       .limit(Number(rowsPerPage));
-    
+
+    // Map logs to include ip and system_id fields (extract from details if not present)
+    const logs = logsRaw.map(log => {
+      let ip = log.ip || 'N/A';
+      let system_id = log.system_id || 'N/A';
+      if ((!log.ip || !log.system_id) && log.details) {
+        // Try to extract from details string
+        const ipMatch = log.details.match(/IP: ([^,]+)/);
+        if (ipMatch) ip = ipMatch[1];
+        const sysMatch = log.details.match(/System: (.+)$/);
+        if (sysMatch) system_id = sysMatch[1];
+      }
+      return {
+        _id: log._id,
+        user_id: log.user_id,
+        action: log.action,
+        details: log.details,
+        timestamp: log.timestamp,
+        ip,
+        system_id,
+        __v: log.__v
+      };
+    });
+
     // Return both the logs and pagination metadata
     res.json({
       logs,

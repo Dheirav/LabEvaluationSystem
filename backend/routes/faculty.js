@@ -48,6 +48,7 @@ const { Parser } = require('json2csv');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const Test = require('../models/Test');
+const logAction = require('../utils/logAction');
 
 // Get courses assigned to the faculty (grouped by course, with batches array for each course)
 router.get('/courses',protect, authorize('faculty'), async (req, res) => {
@@ -197,6 +198,13 @@ router.post('/lab-manuals/upload', protect, authorize('faculty'), manualUpload.s
       title: title || req.file.originalname
     });
     await manual.save();
+    await logAction({
+      user_id: req.user._id,
+      action: 'create',
+      details: `Uploaded lab manual: ${manual._id}`,
+      ip: req.ip,
+      system_id: 'faculty-labmanuals'
+    });
     res.json({ message: 'Lab manual uploaded', manual });
   } catch (err) {
     res.status(500).json({ message: 'Upload failed', error: err.message });
@@ -250,6 +258,13 @@ router.post('/questions', protect, authorize('faculty'), async (req, res) => {
       createdBy: req.user._id
     });
     await question.save();
+    await logAction({
+      user_id: req.user._id,
+      action: 'create',
+      details: `Created question: ${question._id}`,
+      ip: req.ip,
+      system_id: 'faculty-questions'
+    });
     res.status(201).json({ message: 'Question created', question });
   } catch (error) {
     res.status(500).json({ message: 'Error creating question' });
@@ -266,6 +281,13 @@ router.put('/questions/:id', protect, authorize('faculty'), async (req, res) => 
       { new: true }
     );
     if (!question) return res.status(404).json({ message: 'Question not found' });
+    await logAction({
+      user_id: req.user._id,
+      action: 'update',
+      details: `Updated question: ${req.params.id}`,
+      ip: req.ip,
+      system_id: 'faculty-questions'
+    });
     res.json({ message: 'Question updated', question });
   } catch (error) {
     res.status(500).json({ message: 'Error updating question' });
@@ -277,6 +299,13 @@ router.delete('/questions/:id', protect, authorize('faculty'), async (req, res) 
   try {
     const question = await Question.findByIdAndDelete(req.params.id);
     if (!question) return res.status(404).json({ message: 'Question not found' });
+    await logAction({
+      user_id: req.user._id,
+      action: 'delete',
+      details: `Deleted question: ${req.params.id}`,
+      ip: req.ip,
+      system_id: 'faculty-questions'
+    });
     res.json({ message: 'Question deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting question' });
@@ -409,7 +438,7 @@ router.post('/questions/bulk-import', protect, authorize('faculty'), async (req,
 // Create a new test/exercise
 router.post('/tests', protect, authorize('faculty'), async (req, res) => {
   try {
-    const { name, course, questions, date, time, metadata, envSettings } = req.body;
+    const { name, course, questions, date, duration, environmentSettings, batches } = req.body;
     if (!name || !course || !Array.isArray(questions) || questions.length === 0) {
       return res.status(400).json({ message: 'Name, course, and at least one question are required' });
     }
@@ -418,12 +447,19 @@ router.post('/tests', protect, authorize('faculty'), async (req, res) => {
       course,
       questions,
       date,
-      time,
-      metadata: metadata || {},
-      envSettings: envSettings || {},
+      duration,
+      environmentSettings: environmentSettings || {},
+      batches: batches || [],
       createdBy: req.user._id
     });
     await test.save();
+    await logAction({
+      user_id: req.user._id,
+      action: 'create',
+      details: `Created test: ${test._id}`,
+      ip: req.ip,
+      system_id: 'faculty-tests'
+    });
     res.status(201).json({ message: 'Test created', test });
   } catch (error) {
     res.status(500).json({ message: 'Error creating test' });
@@ -475,6 +511,13 @@ router.put('/tests/:id', protect, authorize('faculty'), async (req, res) => {
       { new: true }
     );
     if (!test) return res.status(404).json({ message: 'Test not found' });
+    await logAction({
+      user_id: req.user._id,
+      action: 'update',
+      details: `Updated test: ${req.params.id}`,
+      ip: req.ip,
+      system_id: 'faculty-tests'
+    });
     res.json({ message: 'Test updated', test });
   } catch (error) {
     res.status(500).json({ message: 'Error updating test' });
@@ -486,6 +529,13 @@ router.delete('/tests/:id', protect, authorize('faculty'), async (req, res) => {
   try {
     const test = await Test.findByIdAndDelete(req.params.id);
     if (!test) return res.status(404).json({ message: 'Test not found' });
+    await logAction({
+      user_id: req.user._id,
+      action: 'delete',
+      details: `Deleted test: ${req.params.id}`,
+      ip: req.ip,
+      system_id: 'faculty-tests'
+    });
     res.json({ message: 'Test deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting test' });

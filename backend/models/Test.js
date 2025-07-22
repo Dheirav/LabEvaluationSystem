@@ -1,19 +1,25 @@
 const mongoose = require('mongoose');
 
+const QuestionSchema = new mongoose.Schema({
+  title: String,
+  description: String,
+  expectedAnswer: String,
+  topic: String,
+  tags: [String],
+  difficulty: { type: String, enum: ['Easy', 'Medium', 'Hard'] },
+  marks: Number
+});
+
 const testSchema = new mongoose.Schema({
   name: { type: String, required: true },
   course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
-  questions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
-  date: { type: Date, required: true },      // Date of the test
-  time: { type: String, required: true },    // Time of the test (e.g., "10:00 AM - 12:00 PM")
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  metadata: { type: Object, default: {} },
-  envSettings: {
-    allowTabSwitch: { type: Boolean, default: false },
-    allowExternalCopyPaste: { type: Boolean, default: false },
-    allowInternalCopyPaste: { type: Boolean, default: true },
-    enforceFullscreen: { type: Boolean, default: false }
-  }
+  questions: [QuestionSchema],
+  numQuestions: { type: Number, default: 10 },
+  date: { type: Date, required: true },
+  duration: { type: Number },
+  environmentSettings: { type: Object, default: {} },
+  batches: [String],
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 });
 
 module.exports = mongoose.model('Test', testSchema);

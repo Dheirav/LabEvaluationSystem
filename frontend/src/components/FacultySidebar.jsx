@@ -49,8 +49,28 @@ export default function FacultySidebar({ facultyName }) {
     { text: 'Attendance', path: '/faculty/attendance', icon: <PeopleIcon /> },
   ];
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (err) {
+        // Optionally handle error (e.g., network issues)
+      }
+    }
     localStorage.removeItem('token');
+    if (window.axios) {
+      delete window.axios.defaults.headers.common['Authorization'];
+    }
+    if (typeof window.logout === 'function') {
+      window.logout();
+    }
     navigate('/login');
   };
 

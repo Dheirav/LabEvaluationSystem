@@ -119,120 +119,122 @@ const FacultyLabManuals = () => {
     <Box sx={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #282f2f, #becdcd)' }}>
       <Header title="Faculty - Lab Manuals" />
       <FacultySidebar facultyName={user?.name} />
-      <Box component="main" sx={{ flexGrow: 1, p: 3, overflow: 'auto' }}>
-        <Typography variant="h4" gutterBottom color="white">
-          Lab Manual Upload
-        </Typography>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, maxHeight: '100vh', overflowY: 'auto' }}>
+        <Box sx={{ minWidth: 300 }}>
+          <Typography variant="h4" gutterBottom color="white">
+            Lab Manual Upload
+          </Typography>
 
-        {/* Upload Form */}
-        <Paper sx={{ p: 3, borderRadius: 3, mt: 2, mb: 3 }}>
-          <form onSubmit={handleUpload}>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="course-batch-label">Course, Batch & Semester</InputLabel>
-              <Select
-                labelId="course-batch-label"
-                id="course-batch-select"
-                value={selectedPair.course && selectedPair.batch && selectedPair.semester ? `${selectedPair.course}|${selectedPair.batch}|${selectedPair.semester}` : ''}
-                label="Course, Batch & Semester"
-                onChange={e => {
-                  const [course, batch, semester] = e.target.value.split('|');
-                  setSelectedPair({ course, batch, semester });
-                }}
-                required
-              >
-                {courseBatchPairs.map(pair => (
-                  <MenuItem key={pair.assignmentId} value={`${pair.course}|${pair.batch}|${pair.semester}`}>
-                    {pair.courseName} ({pair.courseCode}) - Batch {pair.batch} - Semester {pair.semester}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              label="Title"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <Button variant="outlined" component="label" sx={{ mr: 2 }}>
-              Choose File
-              <input
-                type="file"
-                hidden
-                ref={fileInputRef}
-                onChange={e => setFile(e.target.files[0])}
-                accept=".pdf,.doc,.docx,.ppt,.pptx"
+          {/* Upload Form */}
+          <Paper sx={{ p: 3, borderRadius: 3, mt: 2, mb: 3 }}>
+            <form onSubmit={handleUpload}>
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel id="course-batch-label">Course, Batch & Semester</InputLabel>
+                <Select
+                  labelId="course-batch-label"
+                  id="course-batch-select"
+                  value={selectedPair.course && selectedPair.batch && selectedPair.semester ? `${selectedPair.course}|${selectedPair.batch}|${selectedPair.semester}` : ''}
+                  label="Course, Batch & Semester"
+                  onChange={e => {
+                    const [course, batch, semester] = e.target.value.split('|');
+                    setSelectedPair({ course, batch, semester });
+                  }}
+                  required
+                >
+                  {courseBatchPairs.map(pair => (
+                    <MenuItem key={pair.assignmentId} value={`${pair.course}|${pair.batch}|${pair.semester}`}>
+                      {pair.courseName} ({pair.courseCode}) - Batch {pair.batch} - Semester {pair.semester}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                fullWidth
+                label="Title"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                sx={{ mb: 2 }}
               />
-            </Button>
-            {file && <span>{file.name}</span>}
-            <Button type="submit" variant="contained" disabled={uploading} sx={{ ml: 2 }}>
-              {uploading ? 'Uploading...' : 'Upload'}
-            </Button>
+              <Button variant="outlined" component="label" sx={{ mr: 2 }}>
+                Choose File
+                <input
+                  type="file"
+                  hidden
+                  ref={fileInputRef}
+                  onChange={e => setFile(e.target.files[0])}
+                  accept=".pdf,.doc,.docx,.ppt,.pptx"
+                />
+              </Button>
+              {file && <span>{file.name}</span>}
+              <Button type="submit" variant="contained" disabled={uploading} sx={{ ml: 2 }}>
+                {uploading ? 'Uploading...' : 'Upload'}
+              </Button>
 
-            {msg && (
-              <Typography sx={{ mt: 2, color: msg.includes('fail') ? 'error.main' : 'success.main' }}>
-                {msg}
-              </Typography>
-            )}
-          </form>
-        </Paper>
+              {msg && (
+                <Typography sx={{ mt: 2, color: msg.includes('fail') ? 'error.main' : 'success.main' }}>
+                  {msg}
+                </Typography>
+              )}
+            </form>
+          </Paper>
 
-        {/* Assigned Courses */}
-        <Paper sx={{ p: 3, borderRadius: 3, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Assigned Courses, Batches & Semesters
-          </Typography>
-          <List>
-            {assignments.length === 0 ? (
-              <ListItem>
-                <ListItemText primary="No assigned courses." />
-              </ListItem>
-            ) : (
-              assignments.map((a) => (
-                <ListItem key={a._id}>
-                  <ListItemText
-                    primary={`${a.courseId?.name || 'Unknown'} (${a.courseId?.code || ''})`}
-                    secondary={`Batch: ${a.batch} | Semester: ${a.semester}`}
-                  />
-                </ListItem>
-              ))
-            )}
-          </List>
-        </Paper>
-        {/* Uploaded Lab Manuals */}
-        <Paper sx={{ p: 3, borderRadius: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Uploaded Lab Manuals
-          </Typography>
-          {loading ? (
-            <CircularProgress />
-          ) : (
+          {/* Assigned Courses */}
+          <Paper sx={{ p: 3, borderRadius: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Assigned Courses, Batches & Semesters
+            </Typography>
             <List>
-              {manuals.length === 0 ? (
+              {assignments.length === 0 ? (
                 <ListItem>
-                  <ListItemText primary="No lab manuals uploaded." />
+                  <ListItemText primary="No assigned courses." />
                 </ListItem>
               ) : (
-                manuals.map((m) => (
-                  <ListItem key={m._id}>
+                assignments.map((a) => (
+                  <ListItem key={a._id}>
                     <ListItemText
-                      primary={m.originalname}
-                      secondary={m.course?.name ? `${m.course.name} (${m.course.code})` : ''}
+                      primary={`${a.courseId?.name || 'Unknown'} (${a.courseId?.code || ''})`}
+                      secondary={`Batch: ${a.batch} | Semester: ${a.semester}`}
                     />
-                    <Button
-                      href={`/uploads/labmanuals/${m.filename}`}
-                      target="_blank"
-                      rel="noopener"
-                      size="small"
-                    >
-                      Download
-                    </Button>
                   </ListItem>
                 ))
               )}
             </List>
-          )}
-        </Paper>
+          </Paper>
+          {/* Uploaded Lab Manuals */}
+          <Paper sx={{ p: 3, borderRadius: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Uploaded Lab Manuals
+            </Typography>
+            {loading ? (
+              <CircularProgress />
+            ) : (
+              <List>
+                {manuals.length === 0 ? (
+                  <ListItem>
+                    <ListItemText primary="No lab manuals uploaded." />
+                  </ListItem>
+                ) : (
+                  manuals.map((m) => (
+                    <ListItem key={m._id}>
+                      <ListItemText
+                        primary={m.originalname}
+                        secondary={m.course?.name ? `${m.course.name} (${m.course.code})` : ''}
+                      />
+                      <Button
+                        href={`/uploads/labmanuals/${m.filename}`}
+                        target="_blank"
+                        rel="noopener"
+                        size="small"
+                      >
+                        Download
+                      </Button>
+                    </ListItem>
+                  ))
+                )}
+              </List>
+            )}
+          </Paper>
+        </Box>
       </Box>
     </Box>
   );

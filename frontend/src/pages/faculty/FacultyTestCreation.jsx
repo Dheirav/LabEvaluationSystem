@@ -10,8 +10,18 @@ const FacultyTestCreation = () => {
   const { user } = useContext(AuthContext);
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
-  const [questions, setQuestions] = useState([]);
-  const [selectedQuestions, setSelectedQuestions] = useState([]);
+  // Inline questions for the test
+  const [questions, setQuestions] = useState([]); // questions to be added to the test
+  const [questionForm, setQuestionForm] = useState({
+    title: '',
+    description: '',
+    expectedAnswer: '',
+    topic: '',
+    tags: [],
+    difficulty: '',
+    marks: ''
+  });
+  const [questionFormError, setQuestionFormError] = useState('');
   const [testName, setTestName] = useState('');
   const [date, setDate] = useState('');
   const [timeWindow, setTimeWindow] = useState([]); // array of selected time slots
@@ -89,7 +99,7 @@ const FacultyTestCreation = () => {
 
   const handleCreateTest = async () => {
     setError(''); setSuccess('');
-    if (!testName || !selectedCourse || selectedQuestions.length === 0 || !date || timeWindow.length === 0 || !type || selectedBatches.length === 0) {
+    if (!testName || !selectedCourse || questions.length === 0 || !date || timeWindow.length === 0 || !type || selectedBatches.length === 0) {
       setError('All fields are required.');
       return;
     }
@@ -98,29 +108,37 @@ const FacultyTestCreation = () => {
       await axios.post('/api/faculty/tests', {
         name: testName,
         course: selectedCourse,
-        questions: selectedQuestions,
+        questions: questions.map(q => ({
+          ...q,
+          marks: Number(q.marks)
+        })),
         date,
-        time: timeWindow.join(', '),
-        type,
+        duration: timeWindow.length * 60, // example: 1hr per slot
+        environmentSettings: envSettings,
         batches: selectedBatches,
-        envSettings
+        numQuestions: ruleCount ? Number(ruleCount) : undefined
       }, { headers: { Authorization: `Bearer ${token}` } });
-      // Add to schedule automatically
-      await axios.post('/api/faculty/schedule', {
-        course: selectedCourse,
-        date,
-        time: timeWindow.join(', '),
-        type,
-        title: testName,
-        testType: type,
-        description: (type === 'test' ? 'Test' : 'Exercise') + ': ' + testName,
-        batches: selectedBatches
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      setSuccess('Test created successfully and scheduled!');
-      setTestName(''); setSelectedQuestions([]); setDate(''); setTimeWindow([]); setType('test'); setSelectedBatches([]);
+      setSuccess('Test created successfully!');
+      setTestName(''); setQuestions([]); setDate(''); setTimeWindow([]); setType('test'); setSelectedBatches([]);
     } catch {
       setError('Failed to create test.');
     }
+  };
+
+  // Add a question to the test
+  const handleAddQuestion = () => {
+    setQuestionFormError('');
+    const { title, description, expectedAnswer, topic, tags, difficulty, marks } = questionForm;
+    if (!title || !topic || !difficulty || !marks) {
+      setQuestionFormError('Title, topic, difficulty, and marks are required.');
+      return;
+    }
+    setQuestions(qs => [...qs, { ...questionForm, marks: Number(marks), tags: Array.isArray(tags) ? tags : [] }]);
+    setQuestionForm({ title: '', description: '', expectedAnswer: '', topic: '', tags: [], difficulty: '', marks: '' });
+  };
+
+  const handleRemoveQuestion = idx => {
+    setQuestions(qs => qs.filter((_, i) => i !== idx));
   };
 
   // Extract all unique tags and marks from questions
@@ -235,31 +253,54 @@ const FacultyTestCreation = () => {
                 <Typography color="error" variant="caption">Time slots must be contiguous.</Typography>
               )}
             </FormControl>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="questions-label">Select Questions</InputLabel>
-              <Select
-                labelId="questions-label"
-                multiple
-                value={selectedQuestions}
-                onChange={e => setSelectedQuestions(e.target.value)}
-                input={<OutlinedInput label="Select Questions" />}
-                renderValue={selected => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map(id => {
-                      const q = questions.find(q => q._id === id);
-                      return <Chip key={id} label={q ? q.title : id} />;
-                    })}
-                  </Box>
-                )}
-              >
-                {questions.map(q => (
-                  <MenuItem key={q._id} value={q._id}>
-                    <Checkbox checked={selectedQuestions.indexOf(q._id) > -1} />
-                    <ListItemText primary={q.title} secondary={q.description} />
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            {/* Add Question Form */}
+            <Box sx={{ gridColumn: '1 / -1', mb: 2, p: 2, border: '1px solid #ccc', borderRadius: 2, background: '#f9f9f9' }}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Add Question to Test</Typography>
+              <TextField label="Title" fullWidth sx={{ mb: 1 }} value={questionForm.title} onChange={e => setQuestionForm(f => ({ ...f, title: e.target.value }))} required />
+              <TextField label="Description" fullWidth sx={{ mb: 1 }} value={questionForm.description} onChange={e => setQuestionForm(f => ({ ...f, description: e.target.value }))} multiline rows={2} />
+              <TextField label="Expected Answer" fullWidth sx={{ mb: 1 }} value={questionForm.expectedAnswer} onChange={e => setQuestionForm(f => ({ ...f, expectedAnswer: e.target.value }))} multiline rows={2} />
+              <TextField label="Topic" fullWidth sx={{ mb: 1 }} value={questionForm.topic} onChange={e => setQuestionForm(f => ({ ...f, topic: e.target.value }))} required />
+              <FormControl fullWidth sx={{ mb: 1 }}>
+                <InputLabel id="difficulty-label">Difficulty</InputLabel>
+                <Select labelId="difficulty-label" value={questionForm.difficulty} label="Difficulty" onChange={e => setQuestionForm(f => ({ ...f, difficulty: e.target.value }))} required>
+                  <MenuItem value="Easy">Easy</MenuItem>
+                  <MenuItem value="Medium">Medium</MenuItem>
+                  <MenuItem value="Hard">Hard</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl fullWidth sx={{ mb: 1 }}>
+                <InputLabel id="tags-label">Tags</InputLabel>
+                <Select labelId="tags-label" multiple value={questionForm.tags} onChange={e => setQuestionForm(f => ({ ...f, tags: e.target.value }))} input={<OutlinedInput label="Tags" />} renderValue={selected => selected.join(', ')}>
+                  {['Array', 'String', 'Math', 'DP', 'Graph', 'Tree', 'Sorting', 'Greedy', 'Other'].map(tag => (
+                    <MenuItem key={tag} value={tag}>
+                      <Checkbox checked={questionForm.tags.indexOf(tag) > -1} />
+                      <ListItemText primary={tag} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField label="Marks" type="number" fullWidth sx={{ mb: 1 }} value={questionForm.marks} onChange={e => setQuestionForm(f => ({ ...f, marks: e.target.value }))} required />
+              {questionFormError && <Typography color="error" sx={{ mb: 1 }}>{questionFormError}</Typography>}
+              <Button variant="contained" onClick={handleAddQuestion} sx={{ mt: 1 }}>+ Add Question to Test</Button>
+            </Box>
+            {/* Preview List of Added Questions */}
+            <Box sx={{ gridColumn: '1 / -1', mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Questions in Test ({questions.length})</Typography>
+              {questions.length === 0 ? <Typography color="text.secondary">No questions added yet.</Typography> : (
+                <Box>
+                  {questions.map((q, idx) => (
+                    <Paper key={idx} sx={{ p: 2, mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box>
+                        <Typography sx={{ fontWeight: 600 }}>{q.title}</Typography>
+                        <Typography variant="body2" color="text.secondary">{q.description}</Typography>
+                        <Typography variant="caption">Topic: {q.topic} | Difficulty: {q.difficulty} | Tags: {q.tags?.join(', ')} | Marks: {q.marks}</Typography>
+                      </Box>
+                      <Button color="error" onClick={() => handleRemoveQuestion(idx)}>Remove</Button>
+                    </Paper>
+                  ))}
+                </Box>
+              )}
+            </Box>
             <FormControl fullWidth sx={{ mb: 2 }}>
               <InputLabel id="batch-label">Select Batch(es)</InputLabel>
               <Select
@@ -311,12 +352,14 @@ const FacultyTestCreation = () => {
               </Select>
             </FormControl>
             <TextField
-              label="Number of Questions (optional)"
+              label="Number of Questions for Each Student (optional)"
               type="number"
               fullWidth
               sx={{ mb: 2 }}
               value={ruleCount}
               onChange={e => setRuleCount(e.target.value)}
+              inputProps={{ min: 1 }}
+              helperText="How many unique questions each student should get. Leave blank to use all."
             />
           </Box>
           <Box sx={{ gridColumn: '1 / -1', mb: 2, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>

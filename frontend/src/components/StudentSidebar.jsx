@@ -40,10 +40,31 @@ export default function StudentSidebar({ studentName }) {
     { text: 'My Study Materials', path: '/student/materials', icon: <AssignmentIcon /> },
     { text: 'Evaluations', path: '/student/evaluations', icon: <AssignmentIcon /> },
     { text: 'Schedule', path: '/student/schedule', icon: <ScheduleIcon /> },
+    { text: 'Available Tests', path: '/student/tests', icon: <QuizIcon /> },
   ];
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (err) {
+        // Optionally handle error (e.g., network issues)
+      }
+    }
     localStorage.removeItem('token');
+    if (window.axios) {
+      delete window.axios.defaults.headers.common['Authorization'];
+    }
+    if (typeof window.logout === 'function') {
+      window.logout();
+    }
     navigate('/login');
   };
 
@@ -66,157 +87,47 @@ export default function StudentSidebar({ studentName }) {
     }
   }
 
+  // ...existing code...
   return (
     <Drawer
       variant="permanent"
+      open={open}
       sx={{
-        width: open ? drawerWidth : theme.spacing(7),
+        width: open ? drawerWidth : 60,
         flexShrink: 0,
         '& .MuiDrawer-paper': {
-          width: open ? drawerWidth : theme.spacing(7),
-          transition: theme.transitions.create('width', {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen,
-          }),
-          overflowX: 'hidden',
-          backgroundColor: '#1f2937',
-          color: 'white',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          zIndex: 1000,
-        }
+          width: open ? drawerWidth : 60,
+          boxSizing: 'border-box',
+          background: '#222',
+          color: '#fff',
+          borderRight: '1px solid #333',
+        },
       }}
     >
-      <Box
-        sx={{
-          p: open ? 2 : 1,
-          textAlign: 'center',
-          borderBottom: '1px solid #374151',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 50,
-          transition: 'all 0.2s'
-        }}
-      >
-        <Avatar
-          sx={{
-            mx: 'auto',
-            mb: open ? 1 : 0,
-            bgcolor: '#90caf9',
-            width: 40,
-            height: 40,
-            fontSize: 24,
-            transition: 'all 0.2s'
-          }}
-        >
-          {studentName ? studentName[0] : user?.name?.[0] || 'S'}
-        </Avatar>
-        {open && (
-          <>
-            <Typography variant="subtitle1" color="white" noWrap>
-              {studentName || user?.name || 'Student'}
-            </Typography>
-            <Typography variant="body2" color="gray" noWrap>
-              {user?.user_id}
-            </Typography>
-          </>
-        )}
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: open ? 'flex-end' : 'center', p: 0, m: 0, minHeight: 0 }}>
-        <IconButton
-          onClick={handleDrawerToggle}
-          sx={{
-            color: 'white',
-            p: 1,
-            m: 0,
-            minHeight: 0,
-            minWidth: 0,
-            alignContent: 'center',
-          }}
-        >
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: open ? 'space-between' : 'center', px: 2, py: 1 }}>
+        {open && <Typography variant="h6" noWrap>{studentName}</Typography>}
+        <IconButton onClick={handleDrawerToggle} sx={{ color: '#fff' }}>
           {open ? <ChevronLeftIcon /> : <MenuIcon />}
         </IconButton>
       </Box>
-      <Divider sx={{ bgcolor: '#374151', my: 0 }} />
-      <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
-        <List sx={{ alignItems: 'center' }}>
-          {items.map(({ text, path, icon }) => (
-            <Tooltip title={!open ? text : ''} placement="right" key={text} arrow>
-              <ListItem
-                button
-                selected={location.pathname === path}
-                onClick={() => navigate(path)}
-                sx={{
-                  justifyContent: open ? 'flex-start' : 'center',
-                  alignItems: 'center',
-                  px: open ? 2.5 : 0,
-                  '&.Mui-selected': {
-                    backgroundColor: '#374151',
-                    color: '#90caf9',
-                    fontWeight: 600
-                  },
-                  '&:hover': {
-                    backgroundColor: '#2d3748',
-                    color: '#90caf9'
-                  },
-                  borderRadius: 2,
-                  mx: 1,
-                  my: 0.5,
-                  minHeight: 48,
-                }}
-              >
-                <ListItemIcon
-                  sx={{
-                    color: 'inherit',
-                    minWidth: 0,
-                    mr: open ? 3 : 2,
-                    justifyContent: 'center',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  {icon}
-                </ListItemIcon>
-                {open && <ListItemText primary={text} />}
-              </ListItem>
-            </Tooltip>
-          ))}
-        </List>
-      </Box>
-      <Box sx={{ mb: 2 }}>
-        <List>
-          <ListItem
-            button
-            onClick={handleLogout}
-            sx={{
-              minHeight: 48,
-              justifyContent: open ? 'initial' : 'center',
-              px: open ? 2.5 : 1,
-              '&:hover': { backgroundColor: '#2d3748', color: '#f87171' },
-              color: '#f87171',
-              borderRadius: 2,
-              mx: 1,
-              mt: 1
-            }}
-          >
-            <ListItemIcon
-              sx={{
-                color: 'inherit',
-                minWidth: 0,
-                mr: open ? 3 : 2,
-                justifyContent: 'center',
-                display: 'flex',
-              }}
-            >
-              <LogoutIcon />
-            </ListItemIcon>
-            {open && <ListItemText primary="Logout" />}
-          </ListItem>
-        </List>
-      </Box>
+      <Divider sx={{ bgcolor: '#444' }} />
+      <List>
+        {items.map((item, idx) => (
+          <Tooltip key={item.text} title={open ? '' : item.text} placement="right">
+            <ListItem button selected={location.pathname === item.path} onClick={() => navigate(item.path)} sx={{ py: 1.5 }}>
+              <ListItemIcon sx={{ color: '#fff', minWidth: 36 }}>{item.icon}</ListItemIcon>
+              {open && <ListItemText primary={item.text} />}
+            </ListItem>
+          </Tooltip>
+        ))}
+      </List>
+      <Divider sx={{ bgcolor: '#444', mt: 'auto' }} />
+      <List>
+        <ListItem button onClick={handleLogout} sx={{ py: 1.5 }}>
+          <ListItemIcon sx={{ color: '#fff', minWidth: 36 }}><LogoutIcon /></ListItemIcon>
+          {open && <ListItemText primary="Logout" />}
+        </ListItem>
+      </List>
     </Drawer>
   );
 }

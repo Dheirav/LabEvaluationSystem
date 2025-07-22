@@ -5,6 +5,7 @@ const pdfParse = require('pdf-parse')
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const logAction = require('../utils/logAction');
+const Attendance = require('../models/Attendance');
 const { protect,authorize } = require('../middleware/auth');
 const multerUpload = require('../middleware/upload');
 const { v4: uuidv4 } = require('uuid'); 
@@ -246,8 +247,6 @@ router.post('/login', async (req, res) => {
     const { user_id, password } = req.body;
 
     const user = await User.findOne({ user_id });
-    console.log('Login attempt:', { user_id, password });
-    console.log('User found:', user );
 
     if (!user) {
         await logAction({
@@ -318,7 +317,7 @@ router.post('/login', async (req, res) => {
         { expiresIn: '7d' }
     );
 
-    // Log the login action
+    // Log the login action (server log)
     await logAction({
         user_id: user.user_id,
         action: 'login',
@@ -326,6 +325,21 @@ router.post('/login', async (req, res) => {
         ip,
         system_id
     });
+
+    // Attendance logging for students
+    if (user.role === 'student') {
+        try {
+            await Attendance.create({
+                user_id: user._id,
+                action: 'login',
+                details: `Student login from IP: ${ip}, System: ${system_id}`,
+                ip,
+                system_id
+            });
+        } catch (err) {
+            console.error('Failed to log student attendance (login):', err);
+        }
+    }
 
     res.status(200).json({
         _id: user._id,
@@ -419,14 +433,17 @@ router.delete('/delete/users/:id', protect, authorize('admin'), async (req, res)
 router.post('/logout', protect, async (req, res) => {
   try {
     // req.user is set by your protect middleware and contains the user's ID
+    console.log('Logout route hit for user:', req.user.id);
     const user = await User.findById(req.user.id);
     if (!user) {
+      console.log('Logout: User not found');
       return res.status(404).json({ message: 'User not found' });
     }
     // Remove all sessions for user on logout
     user.sessions = [];
     await user.save();
 
+    console.log('Calling logAction for logout:', user.user_id, user.role);
     await logAction({
       user_id: user.user_id,
       action: 'logout',
@@ -435,8 +452,32 @@ router.post('/logout', protect, async (req, res) => {
       system_id: req.body.system_id || req.headers['user-agent'] || 'unknown'
     });
 
+    // Attendance logging for students
+    if (user.role === 'student') {
+      try {
+        console.log('Logging student attendance (logout) for:', user.user_id, user._id);
+        // Find the latest login event for this user
+        const lastLogin = await Attendance.findOne({ user_id: user._id, action: 'login' }).sort({ timestamp: -1 });
+        let durationMinutes = null;
+        if (lastLogin) {
+          durationMinutes = Math.round((Date.now() - new Date(lastLogin.timestamp)) / 60000);
+        }
+        await Attendance.create({
+          user_id: user._id,
+          action: 'logout',
+          details: 'Student logout',
+          ip: req.headers['x-forwarded-for']?.split(',').shift() || req.socket?.remoteAddress || req.connection?.remoteAddress || '',
+          system_id: req.body.system_id || req.headers['user-agent'] || 'unknown',
+          durationMinutes
+        });
+      } catch (err) {
+        console.error('Failed to log student attendance (logout):', err);
+      }
+    }
+
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
+    console.error('Logout route error:', error);
     res.status(500).json({ message: 'Logout failed' });
   }
 });

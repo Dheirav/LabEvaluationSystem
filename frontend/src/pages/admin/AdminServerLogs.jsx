@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import {
   Box,
   Paper,
@@ -38,6 +39,11 @@ const AdminServerLogs = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
   const [downloadFormat, setDownloadFormat] = useState('pdf');
+  // Dialog state
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionResult, setActionResult] = useState('');
+  const [showResultDialog, setShowResultDialog] = useState(false);
 
     const handleClearFilters = () => {
     setSearch('');
@@ -49,30 +55,8 @@ const AdminServerLogs = () => {
   };
 
   const handleClearLogs = async () => {
-    // Build confirmation message based on active filters
-    let confirmMessage = 'Are you sure you want to delete';
-    
-    if (search || user_id || action || from || to) {
-      confirmMessage += ' the filtered logs';
-      if (user_id) confirmMessage += ` for user "${user_id}"`;
-      if (action) confirmMessage += ` with action "${action}"`;
-      if (search) confirmMessage += ` containing "${search}"`;
-      if (from || to) {
-        confirmMessage += ' from the date range';
-        if (from) confirmMessage += ` starting ${new Date(from).toLocaleDateString()}`;
-        if (to) confirmMessage += ` until ${new Date(to).toLocaleDateString()}`;
-      }
-    } else {
-      confirmMessage += ' ALL logs';
-    }
-    
-    confirmMessage += '? This action cannot be undone.';
-    
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
-    
-    setLoading(true);
+    setActionLoading(true);
+    setActionResult('');
     try {
       const params = [];
       if (search) params.push(`details=${encodeURIComponent(search)}`);
@@ -81,7 +65,6 @@ const AdminServerLogs = () => {
       if (from) params.push(`from=${from}`);
       if (to) params.push(`to=${to}`);
       const query = params.length ? `?${params.join('&')}` : '';
-      
       const token = localStorage.getItem('token');
       const res = await fetch(`/api/logs/delete_logs${query}`, {
         method: 'DELETE',
@@ -89,24 +72,17 @@ const AdminServerLogs = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      
       const data = await res.json();
-      
       if (res.ok) {
-        // If successful, refresh the logs
         fetchLogs();
-        // You might want to show a success message here
-        alert(`Successfully deleted ${data.deletedCount} logs.`);
+        setActionResult(`Successfully deleted ${data.deletedCount} logs.`);
       } else {
-        // Handle error
-        console.error('Failed to delete logs:', data.message);
-        alert('Failed to delete logs: ' + (data.message || 'Unknown error'));
+        setActionResult('Failed to delete logs: ' + (data.message || 'Unknown error'));
       }
     } catch (e) {
-      console.error("Error deleting logs:", e);
-      alert('Error deleting logs: ' + e.message);
+      setActionResult('Error deleting logs: ' + e.message);
     }
-    setLoading(false);
+    setActionLoading(false);
   };
 
   const fetchLogs = async () => {
@@ -309,16 +285,56 @@ useEffect(() => {
               >
                 Clear Filters
               </Button>
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteSweepIcon />}
-                onClick={handleClearLogs}
-                size="small"
-                disabled={total === 0}
-              >
-                Delete {total > 0 ? `${total} ` : ''}Selected Logs
-              </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteSweepIcon />}
+            onClick={() => setClearDialogOpen(true)}
+            size="small"
+            disabled={total === 0}
+          >
+            Delete {total > 0 ? `${total} ` : ''}Selected Logs
+          </Button>
+        {/* Clear Logs Confirm Dialog */}
+        <ConfirmDialog
+          open={clearDialogOpen}
+          title="Clear Server Logs"
+          message={(() => {
+            if (search || user_id || action || from || to) {
+              let msg = 'Are you sure you want to delete the filtered logs';
+              if (user_id) msg += ` for user "${user_id}"`;
+              if (action) msg += ` with action "${action}"`;
+              if (search) msg += ` containing "${search}"`;
+              if (from || to) {
+                msg += ' from the date range';
+                if (from) msg += ` starting ${new Date(from).toLocaleDateString()}`;
+                if (to) msg += ` until ${new Date(to).toLocaleDateString()}`;
+              }
+              msg += '? This action cannot be undone.';
+              return msg;
+            } else {
+              return 'Are you sure you want to delete ALL logs? This action cannot be undone.';
+            }
+          })()}
+          confirmText={actionLoading ? 'Clearing...' : 'Clear'}
+          cancelText="Cancel"
+          onCancel={() => { setClearDialogOpen(false); setActionResult(''); }}
+          onConfirm={async () => {
+            await handleClearLogs();
+            setClearDialogOpen(false);
+            setShowResultDialog(true);
+          }}
+        />
+        {/* Result Dialog */}
+        <ConfirmDialog
+          open={showResultDialog && !!actionResult}
+          title="Action Result"
+          message={actionResult}
+          confirmText="OK"
+          cancelText=""
+          onCancel={() => { setShowResultDialog(false); setActionResult(''); }}
+          onConfirm={() => { setShowResultDialog(false); setActionResult(''); }}
+        />
             </Stack>
           </Stack>
 
@@ -338,71 +354,31 @@ useEffect(() => {
                   <Table stickyHeader>
                     <TableHead>
                       <TableRow>
-                        <TableCell
-                          sx={{
-                            fontWeight: 'bold',
-                            backgroundColor: 'rgba(245,245,245,1)',
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 1
-                          }}
-                        >
-                          Timestamp
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            fontWeight: 'bold',
-                            backgroundColor: 'rgba(245,245,245,1)',
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 1
-                          }}
-                        >
-                          User
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            fontWeight: 'bold',
-                            backgroundColor: 'rgba(245,245,245,1)',
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 1
-                          }}
-                        >
-                          Action
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            fontWeight: 'bold',
-                            backgroundColor: 'rgba(245,245,245,1)',
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 1
-                          }}
-                        >
-                          Details
-                        </TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'rgba(245,245,245,1)', position: 'sticky', top: 0, zIndex: 1 }}>Timestamp</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'rgba(245,245,245,1)', position: 'sticky', top: 0, zIndex: 1 }}>User</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'rgba(245,245,245,1)', position: 'sticky', top: 0, zIndex: 1 }}>Action</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'rgba(245,245,245,1)', position: 'sticky', top: 0, zIndex: 1 }}>Details</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'rgba(245,245,245,1)', position: 'sticky', top: 0, zIndex: 1 }}>IP Address</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'rgba(245,245,245,1)', position: 'sticky', top: 0, zIndex: 1 }}>System Info</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {logs.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} align="center">No logs found</TableCell>
+                          <TableCell colSpan={6} align="center">No logs found</TableCell>
                         </TableRow>
                       ) : (
                         logs.map((log, idx) => (
                           <TableRow
                             key={idx}
-                            sx={{
-                              backgroundColor: log.details && log.details.includes('ALERT') ? 'rgba(255, 0, 0, 0.5)' : 'transparent'
-                            }}
+                            sx={{ backgroundColor: log.details && log.details.includes('ALERT') ? 'rgba(255, 0, 0, 0.5)' : 'transparent' }}
                           >
-                            <TableCell>
-                              {log.timestamp ? new Date(log.timestamp).toLocaleString() : ''}
-                            </TableCell>
+                            <TableCell>{log.timestamp ? new Date(log.timestamp).toLocaleString() : ''}</TableCell>
                             <TableCell>{log.user_id}</TableCell>
                             <TableCell>{log.action}</TableCell>
                             <TableCell>{log.details}</TableCell>
+                            <TableCell>{log.ip || 'N/A'}</TableCell>
+                            <TableCell>{log.system_id || 'N/A'}</TableCell>
                           </TableRow>
                         ))
                       )}

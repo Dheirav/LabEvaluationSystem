@@ -1,6 +1,8 @@
+
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
-
+import StudentTestList from './pages/student/StudentTestList';
+import StudentTestView from './pages/student/StudentTestView';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import FacultyDashboard from './pages/faculty/FacultyDashboard';
 import StudentDashboard from './pages/student/StudentDashboard';
@@ -24,7 +26,6 @@ import FacultyTestList from './pages/faculty/FacultyTestList';
 import StudentCourses from './pages/student/StudentCourses';
 import StudentMaterials from './pages/student/StudentMaterials';
 import FacultyAttendance from './pages/faculty/FacultyAttendance';
-import AdminAttendance from './pages/admin/AdminAttendance';
 
 function App() {
   return (
@@ -73,6 +74,16 @@ function App() {
           <Route path="/faculty/students" element={
             <ProtectedRoute allowedRoles={['faculty']}>
               <FacultyStudents />
+            </ProtectedRoute>
+          } />
+                    <Route path="/student/tests" element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentTestList />
+            </ProtectedRoute>
+          } />
+          <Route path="/student/test/:testId" element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentTestView />
             </ProtectedRoute>
           } />
 
@@ -152,9 +163,14 @@ function App() {
               <FacultyAttendance />
             </ProtectedRoute>
           } />
-          <Route path="/admin/attendance" element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdminAttendance />
+          <Route path="/student/tests" element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentTestList />
+            </ProtectedRoute>
+          } />
+          <Route path="/student/test/:testId" element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentTestView />
             </ProtectedRoute>
           } />
         </Routes>
