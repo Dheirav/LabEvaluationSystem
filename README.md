@@ -2,6 +2,20 @@
 
 A full-stack web application for managing laboratory evaluations and user registrations in an educational setting.
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/login.png" alt="Sign-in screen" width="800">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/admin-dashboard.png" alt="Admin dashboard showing student, faculty and admin counts" width="800">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/courses.png" alt="Course management: create a course and browse existing ones" width="800">
+</p>
+
 ## Features
 
 ### User Management
