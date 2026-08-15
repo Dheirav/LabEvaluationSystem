@@ -107,7 +107,9 @@ A full-stack web application for managing laboratory evaluations and user regist
 │   │   │   ├── Header.jsx
 │   │   │   └── AdminSidebar.jsx
 │   │   ├── pages/
-│   │   │   └── UserRegistration.jsx
+│   │   │   ├── Login.jsx
+│   │   │   ├── StudentDashboard.jsx
+│   │   │   └── admin/ faculty/ student/
 │   │   └── App.css
 │   └── package.json
 │
