@@ -5,6 +5,7 @@ const Schedule = require('../models/Schedule');
 const Course = require('../models/Course');
 const User = require('../models/User');
 const LabManual = require('../models/LabManual');
+const StudentCourse = require('../models/StudentCourse');
 
 // GET /api/student/schedule
 router.get('/schedule', protect, authorize('student'), async (req, res) => {
@@ -60,6 +61,23 @@ router.get('/lab-manuals', protect, authorize('student'), async (req, res) => {
     res.json(manuals);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch manuals' });
+  }
+});
+
+// GET /api/student/courses
+router.get('/courses', protect, authorize('student'), async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const studentCourses = await StudentCourse.find({ studentId }).populate('courseId');
+    const courses = studentCourses.map(sc => ({
+      _id: sc.courseId._id,
+      name: sc.courseId.name,
+      code: sc.courseId.code,
+      semester: sc.courseId.semester
+    }));
+    res.json(courses);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch courses' });
   }
 });
 

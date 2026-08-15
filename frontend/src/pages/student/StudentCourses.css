@@ -1,0 +1,48 @@
+/* StudentCourses.css */
+.student-dashboard {
+  display: flex;
+  min-height: 100vh;
+  background: #f7f9fb;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+}
+
+.courses-list {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 2rem;
+  margin-top: 1.5rem;
+}
+
+.course-item {
+  border-bottom: 1px solid #eee;
+  padding: 1rem 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.course-item:last-child {
+  border-bottom: none;
+}
+
+.course-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.course-code, .course-semester {
+  color: #888;
+  font-size: 0.95rem;
+  margin-top: 0.2rem;
+}
+
+.no-courses {
+  text-align: center;
+  color: #999;
+  font-size: 1.1rem;
+  padding: 2rem 0;
+}

@@ -37,8 +37,9 @@ export default function StudentSidebar({ studentName }) {
   const items = [
     { text: 'Dashboard', path: '/student', icon: <DashboardIcon /> },
     { text: 'Evaluations', path: '/student/evaluations', icon: <AssignmentIcon /> },
-    { text: 'Tests', path: '/student/tests', icon: <QuizIcon /> }, // Added Tests
+    { text: 'Tests', path: '/student/tests', icon: <QuizIcon /> },
     { text: 'Schedule', path: '/student/schedule', icon: <ScheduleIcon /> },
+    { text: 'My Courses', path: '/student/courses', icon: <AssignmentIcon /> }, // Added My Courses
   ];
 
   const handleLogout = () => {

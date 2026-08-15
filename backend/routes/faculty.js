@@ -192,6 +192,7 @@ router.post('/lab-manuals/upload', protect, authorize('faculty'), manualUpload.s
     res.json({ message: 'Lab manual uploaded', manual });
   } catch (err) {
     res.status(500).json({ message: 'Upload failed', error: err.message });
+  }
 });
 
 // Get all courses with parameters for dynamic question forms

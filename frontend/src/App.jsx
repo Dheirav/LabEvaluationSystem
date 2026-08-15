@@ -19,6 +19,7 @@ import FacultyReports from './pages/faculty/FacultyReports';
 import FacultyCourseAssignment from './pages/admin/FacultyCourseAssignment';
 import FacultyTestCreation from './pages/faculty/FacultyTestCreation';
 import FacultyTestList from './pages/faculty/FacultyTestList';
+import StudentCourses from './pages/student/StudentCourses';
 
 function App() {
   return (
@@ -108,6 +109,12 @@ function App() {
           <Route path="/faculty/tests" element={
             <ProtectedRoute allowedRoles={['faculty']}>
               <FacultyTestList />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/student/courses" element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentCourses />
             </ProtectedRoute>
           } />
 

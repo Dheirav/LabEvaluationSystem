@@ -4,6 +4,7 @@ const { protect, authorize } = require('../middleware/auth');
 const Course = require('../models/Course');
 const User = require('../models/User');
 const FacultyCourse = require('../models/FacultyCourse');
+const StudentCourse = require('../models/StudentCourse');
 const logAction = require('../utils/logAction');
 
 // Helper to safely log actions with details
@@ -93,6 +94,20 @@ router.post('/assign-faculty', protect, authorize('admin'), async (req, res) => 
     }
     const newAssignment = new FacultyCourse({ facultyId, courseId, batch, semester });
     await newAssignment.save();
+
+    // Automatically assign all students in the batch and semester to the course
+    const students = await User.find({ role: 'student', batch, semester });
+    const bulkOps = students.map(student => ({
+      updateOne: {
+        filter: { studentId: student._id, courseId },
+        update: { $setOnInsert: { studentId: student._id, courseId } },
+        upsert: true
+      }
+    }));
+    if (bulkOps.length > 0) {
+      await StudentCourse.bulkWrite(bulkOps);
+    }
+
     await safeLogAction(req.user, 'assign_faculty', `Assigned faculty ${faculty.name} (${faculty.user_id}) to course ${course.name} (${course.code}) for batch ${batch}, semester ${semester}`);
     res.status(201).json({ message: 'Faculty assigned to course successfully', assignment: newAssignment });
   } catch (error) {
